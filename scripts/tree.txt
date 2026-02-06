@@ -1,0 +1,252 @@
+quant_fx_system
+├── .github
+│   └── workflows
+│       ├── ci.yml
+│       └── deploy-docs.yml
+├── config
+│   ├── backtest.yaml
+│   ├── data_sources.yaml
+│   ├── logging.yaml
+│   └── model_params.yaml
+├── data
+│   ├── features
+│   │   └── .gitkeep
+│   ├── processed
+│   │   └── .gitkeep
+│   └── raw
+│       └── .gitkeep
+├── docs
+│   ├── adr
+│   │   └── 0001-monorepo-structure.md
+│   ├── api-contract.md
+│   ├── architecture.md
+│   └── research-notes.md
+├── infra
+│   ├── nginx
+│   │   └── default.conf
+│   └── render
+│       ├── backend-render.yaml
+│       └── README.md
+├── notebooks
+│   └── exploration.ipynb
+├── packages
+│   ├── backend
+│   │   ├── scripts
+│   │   │   ├── run_local_pipeline.py
+│   │   │   └── seed_dummy_data.py
+│   │   ├── src
+│   │   │   └── quant_fx_system
+│   │   │       ├── api
+│   │   │       │   ├── routes
+│   │   │       │   │   ├── __init__.py
+│   │   │       │   │   ├── backtest.py
+│   │   │       │   │   ├── health.py
+│   │   │       │   │   ├── history.py
+│   │   │       │   │   └── state.py
+│   │   │       │   ├── schemas
+│   │   │       │   │   ├── __init__.py
+│   │   │       │   │   ├── common.py
+│   │   │       │   │   ├── errors.py
+│   │   │       │   │   └── quant_state.py
+│   │   │       │   ├── __init__.py
+│   │   │       │   ├── deps.py
+│   │   │       │   └── main.py
+│   │   │       ├── application
+│   │   │       │   ├── services
+│   │   │       │   │   ├── __init__.py
+│   │   │       │   │   ├── build_features.py
+│   │   │       │   │   ├── export_state.py
+│   │   │       │   │   ├── run_backtest.py
+│   │   │       │   │   └── run_inference.py
+│   │   │       │   ├── __init__.py
+│   │   │       │   └── dtos.py
+│   │   │       ├── cli
+│   │   │       │   ├── __init__.py
+│   │   │       │   └── main.py
+│   │   │       ├── domain
+│   │   │       │   ├── entities
+│   │   │       │   │   ├── __init__.py
+│   │   │       │   │   ├── decision.py
+│   │   │       │   │   ├── market_data.py
+│   │   │       │   │   ├── quant_state.py
+│   │   │       │   │   ├── regime.py
+│   │   │       │   │   └── signal.py
+│   │   │       │   ├── ports
+│   │   │       │   │   ├── __init__.py
+│   │   │       │   │   ├── clock.py
+│   │   │       │   │   ├── market_data_provider.py
+│   │   │       │   │   └── state_store.py
+│   │   │       │   ├── __init__.py
+│   │   │       │   └── errors.py
+│   │   │       ├── infrastructure
+│   │   │       │   ├── bloomberg
+│   │   │       │   │   ├── __init__.py
+│   │   │       │   │   ├── fetch_bloomberg.py
+│   │   │       │   │   └── session.py
+│   │   │       │   ├── storage
+│   │   │       │   │   ├── __init__.py
+│   │   │       │   │   ├── filesystem_state_store.py
+│   │   │       │   │   └── sqlite_state_store.py
+│   │   │       │   ├── time
+│   │   │       │   │   ├── __init__.py
+│   │   │       │   │   └── system_clock.py
+│   │   │       │   └── __init__.py
+│   │   │       ├── quant
+│   │   │       │   ├── backtest
+│   │   │       │   │   ├── __init__.py
+│   │   │       │   │   ├── bias_checks.py
+│   │   │       │   │   ├── engine.py
+│   │   │       │   │   ├── stress_tests.py
+│   │   │       │   │   └── walk_forward.py
+│   │   │       │   ├── data_pipeline
+│   │   │       │   │   ├── __init__.py
+│   │   │       │   │   ├── clean_align.py
+│   │   │       │   │   ├── feature_engineering.py
+│   │   │       │   │   └── stationarity.py
+│   │   │       │   ├── decay
+│   │   │       │   │   ├── __init__.py
+│   │   │       │   │   ├── half_life.py
+│   │   │       │   │   ├── rolling_metrics.py
+│   │   │       │   │   └── stability_tests.py
+│   │   │       │   ├── evaluation
+│   │   │       │   │   ├── __init__.py
+│   │   │       │   │   ├── distribution.py
+│   │   │       │   │   ├── model_risk.py
+│   │   │       │   │   ├── performance.py
+│   │   │       │   │   └── regime_analysis.py
+│   │   │       │   ├── information
+│   │   │       │   │   ├── __init__.py
+│   │   │       │   │   ├── mutual_information.py
+│   │   │       │   │   └── orthogonality.py
+│   │   │       │   ├── meta_model
+│   │   │       │   │   ├── __init__.py
+│   │   │       │   │   ├── calibration.py
+│   │   │       │   │   ├── meta_features.py
+│   │   │       │   │   ├── meta_labels.py
+│   │   │       │   │   └── meta_model.py
+│   │   │       │   ├── regimes
+│   │   │       │   │   ├── __init__.py
+│   │   │       │   │   ├── hmm.py
+│   │   │       │   │   ├── regime_state.py
+│   │   │       │   │   ├── trend_range.py
+│   │   │       │   │   └── volatility_regime.py
+│   │   │       │   ├── risk
+│   │   │       │   │   ├── __init__.py
+│   │   │       │   │   ├── drawdown_control.py
+│   │   │       │   │   ├── position_sizing.py
+│   │   │       │   │   ├── transaction_costs.py
+│   │   │       │   │   └── volatility_scaling.py
+│   │   │       │   ├── signals
+│   │   │       │   │   ├── __init__.py
+│   │   │       │   │   ├── mean_reversion.py
+│   │   │       │   │   ├── microstructure.py
+│   │   │       │   │   ├── momentum.py
+│   │   │       │   │   └── signal_registry.py
+│   │   │       │   └── __init__.py
+│   │   │       ├── utils
+│   │   │       │   ├── __init__.py
+│   │   │       │   ├── math.py
+│   │   │       │   ├── pandas_utils.py
+│   │   │       │   ├── typing.py
+│   │   │       │   └── validation.py
+│   │   │       ├── __init__.py
+│   │   │       ├── logging_config.py
+│   │   │       └── settings.py
+│   │   ├── tests
+│   │   │   ├── __init__.py
+│   │   │   ├── test_meta_model.py
+│   │   │   ├── test_regimes.py
+│   │   │   └── test_signals.py
+│   │   ├── .env.example
+│   │   ├── Dockerfile
+│   │   ├── pyproject.toml
+│   │   ├── README.md
+│   │   ├── render-start.sh
+│   │   └── uv.lock
+│   └── frontend
+│       ├── src
+│       │   ├── app
+│       │   │   ├── layout
+│       │   │   │   ├── Navbar.tsx
+│       │   │   │   └── Shell.tsx
+│       │   │   ├── providers
+│       │   │   │   └── AppProviders.tsx
+│       │   │   ├── App.tsx
+│       │   │   └── routes.tsx
+│       │   ├── assets
+│       │   ├── domains
+│       │   │   ├── history
+│       │   │   │   ├── api
+│       │   │   │   │   └── historyApi.ts
+│       │   │   │   ├── hooks
+│       │   │   │   │   └── useHistory.ts
+│       │   │   │   ├── model
+│       │   │   │   │   └── HistoryPoint.ts
+│       │   │   │   └── ui
+│       │   │   │       └── DecisionTimeline.tsx
+│       │   │   ├── market
+│       │   │   │   ├── api
+│       │   │   │   │   └── marketApi.ts
+│       │   │   │   ├── model
+│       │   │   │   │   └── PricePoint.ts
+│       │   │   │   └── ui
+│       │   │   │       └── PriceChart.tsx
+│       │   │   └── modelState
+│       │   │       ├── api
+│       │   │       │   └── stateApi.ts
+│       │   │       ├── hooks
+│       │   │       │   └── useQuantState.ts
+│       │   │       ├── model
+│       │   │       │   └── QuantState.ts
+│       │   │       └── ui
+│       │   │           ├── ProbabilityGauge.tsx
+│       │   │           ├── RegimeBadge.tsx
+│       │   │           └── SignalTable.tsx
+│       │   ├── pages
+│       │   │   ├── Dashboard.tsx
+│       │   │   ├── History.tsx
+│       │   │   └── ModelState.tsx
+│       │   ├── shared
+│       │   │   ├── api
+│       │   │   │   ├── httpClient.ts
+│       │   │   │   └── quantApi.ts
+│       │   │   ├── config
+│       │   │   │   └── env.ts
+│       │   │   ├── lib
+│       │   │   │   ├── dates.ts
+│       │   │   │   ├── guards.ts
+│       │   │   │   └── numbers.ts
+│       │   │   ├── types
+│       │   │   │   ├── api.ts
+│       │   │   │   └── brand.ts
+│       │   │   └── ui
+│       │   │       ├── charts
+│       │   │       │   └── TimeSeriesChart.tsx
+│       │   │       └── components
+│       │   │           ├── Badge.tsx
+│       │   │           ├── Card.tsx
+│       │   │           └── Skeleton.tsx
+│       │   ├── styles
+│       │   │   └── globals.css
+│       │   └── main.tsx
+│       ├── .env.example
+│       ├── index.html
+│       ├── package.json
+│       ├── tsconfig.json
+│       └── vite.config.ts
+├── scripts
+│   ├── repo_init.sh
+│   └── tree.txt
+├── .editorconfig
+├── .env.example
+├── .gitattributes
+├── .gitignore
+├── .gitkeep
+├── .pre-commit-config.yaml
+├── docker-compose.yml
+├── LICENSE
+├── Makefile
+├── package.json
+├── pnpm-workspace.yaml
+├── README.md
+└── turbo.json

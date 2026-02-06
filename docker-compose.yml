@@ -1,0 +1,7 @@
+# Placeholder docker-compose for local dev
+version: "3.9"
+services:
+  api:
+    image: placeholder-api
+  ui:
+    image: placeholder-ui

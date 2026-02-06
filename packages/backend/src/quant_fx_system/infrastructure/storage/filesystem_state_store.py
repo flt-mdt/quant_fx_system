@@ -1,0 +1,1 @@
+"""Filesystem state store placeholder."""

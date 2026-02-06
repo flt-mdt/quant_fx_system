@@ -1,0 +1,12 @@
+{
+  "name": "quant-fx-system",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "pnpm --filter frontend dev",
+    "backend-dev": "make backend-dev",
+    "test": "make test"
+  }
+}

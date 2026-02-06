@@ -1,0 +1,1 @@
+"""Regime entity placeholder."""

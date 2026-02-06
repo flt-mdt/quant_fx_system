@@ -1,0 +1,1 @@
+"""QuantState schema placeholder."""

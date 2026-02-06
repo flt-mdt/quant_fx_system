@@ -1,0 +1,9 @@
+# Placeholder docs deploy workflow
+name: Deploy Docs
+on: [push]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Placeholder
+        run: echo "Docs deploy placeholder"
