@@ -1,0 +1,1 @@
+"""QuantState entity placeholder."""

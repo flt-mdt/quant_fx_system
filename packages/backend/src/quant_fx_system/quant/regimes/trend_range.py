@@ -1,0 +1,1 @@
+"""Trend/range regime placeholder."""

@@ -1,0 +1,1 @@
+"""Microstructure signal placeholder."""

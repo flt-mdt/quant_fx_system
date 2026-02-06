@@ -1,0 +1,1 @@
+"""Volatility scaling placeholder."""

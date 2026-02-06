@@ -1,0 +1,1 @@
+"""HMM regime placeholder."""
