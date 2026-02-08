@@ -3,6 +3,7 @@ import pandas.testing as pdt
 import pytest
 
 from quant_fx_system.quant.risk import RiskConfig, apply_risk_overlay
+from quant_fx_system.quant.risk.drawdown import compute_equity_from_returns
 from quant_fx_system.quant.risk.turnover import cap_position_delta
 from quant_fx_system.quant.risk.types import DrawdownConfig, TurnoverConfig, VolTargetConfig
 
@@ -126,6 +127,37 @@ def test_pipeline_metrics():
         "equity_proxy",
         "drawdown",
         "dd_flag",
+        "dd_guard_active",
         "position_final",
     }
     assert required_cols.issubset(set(result.metrics.columns))
+
+
+def test_inf_rejected():
+    index = pd.date_range("2023-01-01", periods=3, freq="D", tz="UTC")
+    position = _make_series([0.0, 1.0, 0.0], index)
+    returns = _make_series([0.0, float("inf"), 0.0], index)
+
+    with pytest.raises(ValueError):
+        apply_risk_overlay(position_raw=position, returns=returns, cfg=RiskConfig())
+
+
+def test_missing_returns_rejected():
+    index = pd.date_range("2023-01-01", periods=4, freq="D", tz="UTC")
+    position = _make_series([0.0, 1.0, 0.0, 1.0], index)
+    returns = _make_series([0.0, float("nan"), 0.01, 0.0], index)
+
+    with pytest.raises(ValueError):
+        apply_risk_overlay(position_raw=position, returns=returns, cfg=RiskConfig())
+
+
+def test_equity_clamped_at_zero():
+    index = pd.date_range("2023-01-01", periods=3, freq="D", tz="UTC")
+    position = _make_series([2.0, 2.0, 2.0], index)
+    returns = _make_series([0.0, -1.5, 0.0], index)
+
+    equity = compute_equity_from_returns(returns, position, initial_equity=1.0)
+
+    assert (equity >= 0.0).all()
+    assert equity.iloc[1] == 0.0
+    assert equity.iloc[2] == 0.0

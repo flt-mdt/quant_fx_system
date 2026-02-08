@@ -21,7 +21,7 @@ def validate_utc_series(series: pd.Series, name: str, allow_nans: bool = False) 
     values = series.to_numpy()
     if not allow_nans and np.isnan(values).any():
         raise ValueError(f"{name} contains NaN values")
-    if not np.isfinite(values[np.isfinite(values)]).all():
+    if np.isinf(values).any():
         raise ValueError(f"{name} contains non-finite values")
 
 

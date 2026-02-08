@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import asdict
+
 import pandas as pd
 
 from .drawdown import apply_drawdown_guard
@@ -31,6 +33,7 @@ def apply_risk_overlay(
     Requirements:
       - Inputs must have UTC, monotonic, unique indices.
       - No lookahead: any metric derived from returns must be shifted by cfg.*.shift.
+      - Positions are applied with a one-bar lag: position[t] impacts return[t+1].
     """
 
     if returns is None and price is None:
@@ -52,6 +55,9 @@ def apply_risk_overlay(
     if cfg.vol_target.enabled:
         validate_window(cfg.vol_target.window, "vol_target.window")
 
+    if cfg.var_es.enabled:
+        raise NotImplementedError("var/es overlay is not implemented yet")
+
     position_aligned, returns_aligned, price_aligned = align_series(
         position_raw, returns, price
     )
@@ -64,6 +70,12 @@ def apply_risk_overlay(
         raise ValueError("Returns could not be derived from price")
 
     returns_aligned = returns_aligned.rename("returns")
+    missing_returns = returns_aligned.isna()
+    if missing_returns.any():
+        if not (missing_returns.iloc[0] and not missing_returns.iloc[1:].any()):
+            raise ValueError(
+                "returns contains NaN values beyond the initial pct_change bar"
+            )
 
     metrics = pd.DataFrame(index=position_aligned.index)
     metrics["returns"] = returns_aligned
@@ -105,6 +117,7 @@ def apply_risk_overlay(
         metrics["equity_proxy"] = (1.0 + returns_aligned.fillna(0.0)).cumprod()
         metrics["drawdown"] = 0.0
         metrics["dd_flag"] = 0.0
+        metrics["dd_guard_active"] = 0.0
 
     position_current = position_current.clip(
         lower=-cfg.max_leverage, upper=cfg.max_leverage
@@ -116,4 +129,22 @@ def apply_risk_overlay(
 
     validate_position_bounds(position_current, cfg.max_leverage)
 
-    return RiskResult(position=position_current, metrics=metrics, metadata={})
+    metadata = {
+        "config": asdict(cfg),
+        "start": position_current.index[0].isoformat(),
+        "end": position_current.index[-1].isoformat(),
+        "execution_convention": "position[t] applied to return[t+1]",
+        "windows": {
+            "vol_target": cfg.vol_target.window if cfg.vol_target.enabled else None,
+            "var_es": cfg.var_es.window if cfg.var_es.enabled else None,
+            "drawdown": None,
+        },
+        "shifts": {
+            "vol_target": cfg.vol_target.shift if cfg.vol_target.enabled else None,
+            "turnover": cfg.turnover.shift if cfg.turnover.enabled else None,
+            "drawdown": cfg.drawdown.shift if cfg.drawdown.enabled else None,
+            "var_es": cfg.var_es.shift if cfg.var_es.enabled else None,
+        },
+    }
+
+    return RiskResult(position=position_current, metrics=metrics, metadata=metadata)
