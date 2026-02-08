@@ -31,16 +31,16 @@ Moteur de backtest **simple, déterministe et “next-bar”** pour évaluer des
 
 ```mermaid
 flowchart LR
-  Price[(price: pd.Series<br/>UTC DatetimeIndex)] -->|align intersection| Engine[run_backtest]
-  Position[(position: pd.Series<br/>UTC DatetimeIndex)] -->|align intersection| Engine
+  Price[price: pd.Series UTC DatetimeIndex] -->|align intersection| Engine[run_backtest]
+  Position[position: pd.Series UTC DatetimeIndex] -->|align intersection| Engine
 
-  Engine --> Returns[returns = pct_change(price)]
-  Engine --> Shift[pos_applied = shift(position, +1)]
+  Engine --> Returns[returns = pct_change price]
+  Engine --> Shift[pos_applied = shift position, +1]
   Shift --> PnL[pnl = pos_applied * returns - costs]
-  Engine --> Turnover[turnover = abs(diff(position))]
-  Turnover --> Costs[costs = (tc_bps+slippage_bps)/1e4 * turnover]
-  PnL --> Equity[equity = compound(initial_equity, pnl)]
-  Engine --> Result[BacktestResult<br/>returns, position, pnl, equity, turnover, costs, metadata]
+  Engine --> Turnover[turnover = abs diff position]
+  Turnover --> Costs[costs = tc_bps+slippage_bps/1e4 * turnover]
+  PnL --> Equity[equity = compound initial_equity, pnl]
+  Engine --> Result[BacktestResult returns, position, pnl, equity, turnover, costs, metadata]
 ```
 
 ## Stack & Architecture
