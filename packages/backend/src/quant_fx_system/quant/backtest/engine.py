@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import asdict
+
 import pandas as pd
 
 from .costs import compute_costs, compute_turnover
@@ -7,6 +9,7 @@ from .returns import compute_simple_returns
 from .types import BacktestConfig, BacktestResult
 from .validation import (
     align_price_position,
+    validate_config,
     validate_no_lookahead_alignment,
     validate_position_series,
     validate_price_series,
@@ -39,29 +42,36 @@ def run_backtest(
     if cfg.return_type != "simple":
         raise ValueError("Only simple returns are supported")
 
+    validate_config(cfg)
     validate_price_series(price)
     validate_position_series(position, cfg.max_leverage)
 
     price_aligned, position_aligned = align_price_position(price, position)
 
     returns = compute_simple_returns(price_aligned)
+    returns.name = "returns"
     position_applied = position_aligned.shift(1).reindex(returns.index)
     validate_no_lookahead_alignment(position_aligned, position_applied, returns.index)
     position_applied = position_applied.fillna(0.0)
+    position_applied.name = "position"
 
     turnover = compute_turnover(position_aligned).reindex(returns.index).fillna(0.0)
-    costs = compute_costs(turnover, cfg.transaction_cost_bps, cfg.slippage_bps)
+    turnover.name = "turnover"
+    costs_for_return = turnover.shift(1).reindex(returns.index).fillna(0.0)
+    costs = compute_costs(costs_for_return, cfg.transaction_cost_bps, cfg.slippage_bps)
+    costs.name = "costs"
 
     pnl = position_applied * returns - costs
+    pnl.name = "pnl"
     equity = _compute_equity(pnl, cfg.initial_equity)
+    equity.name = "equity"
 
     metadata = {
+        **asdict(cfg),
         "execution": cfg.execution,
         "return_type": cfg.return_type,
-        "transaction_cost_bps": cfg.transaction_cost_bps,
-        "slippage_bps": cfg.slippage_bps,
-        "max_leverage": cfg.max_leverage,
-        "initial_equity": cfg.initial_equity,
+        "pnl_convention": "returns_end_time",
+        "costs_alignment": "turnover_shifted_one_period",
         "start": returns.index.min(),
         "end": returns.index.max(),
     }

@@ -23,6 +23,7 @@ def test_no_lookahead_execution():
     spike_time = index[2]
     assert result.pnl.loc[spike_time] == 0.0
     expected_pnl = result.position * result.returns
+    expected_pnl.name = "pnl"
     pdt.assert_series_equal(result.pnl, expected_pnl)
 
 
@@ -50,7 +51,9 @@ def test_costs_and_turnover():
     result = run_backtest(price, position, cfg)
 
     expected_turnover = pd.Series([1.0, 0.0, 2.0], index=index[1:])
-    expected_costs = expected_turnover * (10.0 / 1e4)
+    expected_turnover.name = "turnover"
+    expected_costs = expected_turnover.shift(1).fillna(0.0) * (10.0 / 1e4)
+    expected_costs.name = "costs"
 
     pdt.assert_series_equal(result.turnover, expected_turnover)
     pdt.assert_series_equal(result.costs, expected_costs)
@@ -80,3 +83,20 @@ def test_determinism():
     pdt.assert_series_equal(result_a.equity, result_b.equity)
     pdt.assert_series_equal(result_a.turnover, result_b.turnover)
     pdt.assert_series_equal(result_a.costs, result_b.costs)
+
+
+def test_costs_aligned_with_applied_position():
+    index = pd.date_range("2023-01-01", periods=3, freq="D", tz="UTC")
+    price = _make_price([1.0, 1.0, 1.0], index)
+    position = _make_position([0.0, 1.0, 1.0], index)
+
+    cfg = BacktestConfig(transaction_cost_bps=10.0)
+    result = run_backtest(price, position, cfg)
+
+    expected_costs = pd.Series([0.0, 10.0 / 1e4], index=index[1:])
+    expected_costs.name = "costs"
+    expected_pnl = expected_costs * -1.0
+    expected_pnl.name = "pnl"
+
+    pdt.assert_series_equal(result.costs, expected_costs)
+    pdt.assert_series_equal(result.pnl, expected_pnl)
