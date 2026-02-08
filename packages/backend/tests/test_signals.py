@@ -38,6 +38,13 @@ def test_validate_features_requires_decision_shift() -> None:
         raise AssertionError("Expected validation to fail without decision_shift.")
 
 
+def test_validate_features_casts_decision_shift_string() -> None:
+    features = _make_features()
+    features.attrs["decision_shift"] = "1"
+    validate_features_for_signals(features)
+    assert features.attrs["decision_shift"] == 1
+
+
 def test_momentum_signal_output_bounds() -> None:
     features = _make_features()
     config = MomentumZScoreConfig(window=20, max_leverage=1.5, method="tanh", k=1.2)
@@ -85,3 +92,14 @@ def test_outputs_have_utc_monotonic_unique_index() -> None:
     assert str(result.position.index.tz) == "UTC"
     assert result.position.index.is_monotonic_increasing
     assert result.position.index.is_unique
+
+
+def test_run_raises_when_alpha_empty() -> None:
+    features = _make_features(rows=10)
+    signal = MomentumZScoreSignal(MomentumZScoreConfig(window=20))
+    try:
+        signal.run(features)
+    except ValueError as exc:
+        assert "alpha is empty" in str(exc)
+    else:
+        raise AssertionError("Expected run to fail when alpha is empty.")
