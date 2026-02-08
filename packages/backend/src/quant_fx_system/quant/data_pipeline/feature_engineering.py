@@ -32,15 +32,18 @@ def compute_log_returns(price: pd.Series) -> pd.Series:
 
     if price.empty:
         raise ValueError("Price series is empty.")
-    returns = np.log(price).diff()
+    price_float = price.astype(float)
+    if (price_float <= 0).any():
+        raise ValueError("Price series contains non-positive values.")
+    returns = np.log(price_float).diff()
     return returns.rename("ret_1")
 
 
 def rolling_vol(returns: pd.Series, window: int) -> pd.Series:
     """Compute rolling volatility (standard deviation) of returns."""
 
-    if window < 1:
-        raise ValueError("window must be >= 1 for rolling volatility.")
+    if window < 2:
+        raise ValueError("window must be >= 2 for rolling volatility.")
     return returns.rolling(window=window, min_periods=window).std(ddof=0)
 
 
@@ -55,8 +58,8 @@ def momentum(returns: pd.Series, window: int) -> pd.Series:
 def zscore(series: pd.Series, window: int, *, epsilon: float = 1e-12) -> pd.Series:
     """Compute rolling z-score with numerical stability."""
 
-    if window < 1:
-        raise ValueError("window must be >= 1 for z-score.")
+    if window < 2:
+        raise ValueError("window must be >= 2 for z-score.")
     rolling_mean = series.rolling(window=window, min_periods=window).mean()
     rolling_std = series.rolling(window=window, min_periods=window).std(ddof=0)
     return (series - rolling_mean) / (rolling_std + epsilon)
