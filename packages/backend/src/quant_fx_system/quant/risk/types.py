@@ -25,6 +25,7 @@ class DrawdownConfig:
     mode: Literal["flatten", "linear_delever"] = "flatten"
     floor_leverage: float = 0.0
     cooldown_bars: int = 0
+    shift: int = 0
 
 
 @dataclass(frozen=True)
