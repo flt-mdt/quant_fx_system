@@ -3,6 +3,19 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from .types import BacktestConfig
+
+
+def validate_config(cfg: BacktestConfig) -> None:
+    if cfg.initial_equity <= 0:
+        raise ValueError("initial_equity must be positive")
+    if cfg.transaction_cost_bps < 0:
+        raise ValueError("transaction_cost_bps must be non-negative")
+    if cfg.slippage_bps < 0:
+        raise ValueError("slippage_bps must be non-negative")
+    if cfg.max_leverage <= 0:
+        raise ValueError("max_leverage must be positive")
+
 
 def _validate_datetime_index(index: pd.Index, label: str) -> None:
     if not isinstance(index, pd.DatetimeIndex):
