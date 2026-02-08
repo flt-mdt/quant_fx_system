@@ -52,11 +52,11 @@ Ce dossier contient **3 briques** cohérentes et testées :
 
 ```mermaid
 flowchart LR
-  Raw[Raw FX prices<br/>(Series/DataFrame)] --> A[clean_align.clean_price_pipeline]
+  Raw[Raw FX prices (Series/DataFrame)] --> A[clean_align.clean_price_pipeline]
   A --> P[price_clean (Series)]
-  P --> F[feature_engineering.build_features<br/>(decision_shift)]
+  P --> F[feature_engineering.build_features (decision_shift)]
   F --> X[features (DataFrame)]
-  P --> S[stationarity.stationarity_report<br/>(ADF + KPSS)]
+  P --> S[stationarity.stationarity_report (ADF + KPSS)]
   S --> R[report (DataFrame)]
   T[tests/test_data_pipeline.py] -. verifies .- A
   T -. verifies .- F
@@ -237,13 +237,10 @@ Conventional Commits (recommandé) :
 ---
 
 ## Licence
-
-À compléter : vérifier le fichier LICENSE à la racine du repo.
-Attendu côté repo global (d’après vos consignes) : Business Source License 1.1 (BSL 1.1).
+Business Source License 1.1 (BSL 1.1).
 
 ---
 
 ## Crédits
 
-À compléter selon les métadonnées du repo (auteurs/maintainers).
-Attendu côté repo global (d’après vos consignes) : Florian Mauduit.
+Florian Mauduit.
