@@ -54,13 +54,21 @@ def to_position_from_score(
 ) -> pd.Series:
     """Convert a score into a bounded position series."""
 
+    if max_leverage <= 0:
+        raise ValueError("max_leverage must be > 0.")
     if method == "tanh":
-        return max_leverage * np.tanh(k * score)
+        return pd.Series(
+            max_leverage * np.tanh(k * score),
+            index=score.index,
+            name="position",
+        )
     if method == "clip":
         max_abs = score.abs().max()
         if pd.isna(max_abs) or max_abs == 0:
             normalized = score * 0.0
         else:
             normalized = score / max_abs
-        return normalized.clip(lower=-max_leverage, upper=max_leverage)
+        position = normalized.clip(lower=-max_leverage, upper=max_leverage)
+        position.name = "position"
+        return position
     raise ValueError(f"Unsupported method: {method}")

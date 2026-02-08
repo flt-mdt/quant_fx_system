@@ -31,7 +31,7 @@ class MomentumZScoreSignal(BaseSignal):
     def compute_alpha(self, features: pd.DataFrame) -> pd.Series:
         column = f"z_mom_{self.config.window}"
         if column in features.columns:
-            alpha = features[column]
+            alpha = features[column].copy()
         else:
             if "ret_1" not in features.columns:
                 raise ValueError("features must contain ret_1 to construct momentum.")
@@ -39,6 +39,7 @@ class MomentumZScoreSignal(BaseSignal):
                 window=self.config.window, min_periods=self.config.window
             ).sum()
             alpha = zscore_rolling(momentum, window=self.config.window, epsilon=1e-12)
+        alpha.name = f"z_mom_{self.config.window}"
         return alpha.astype(float)
 
     def compute_position(self, alpha: pd.Series, features: pd.DataFrame) -> pd.Series:

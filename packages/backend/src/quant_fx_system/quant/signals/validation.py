@@ -36,7 +36,14 @@ def validate_features_for_signals(features: pd.DataFrame, *, allow_nans: bool = 
     decision_shift = features.attrs.get("decision_shift")
     if decision_shift is None:
         raise ValueError("features.attrs['decision_shift'] is required for signals.")
-    if decision_shift < 1:
+    try:
+        decision_shift_int = int(decision_shift)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "features.attrs['decision_shift'] must be an integer >= 1."
+        ) from exc
+    if decision_shift_int < 1:
         raise ValueError("features.attrs['decision_shift'] must be >= 1.")
+    features.attrs["decision_shift"] = decision_shift_int
     if not allow_nans and features.isna().any().any():
         raise ValueError("features must not contain NaNs when allow_nans=False.")

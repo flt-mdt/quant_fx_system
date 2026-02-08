@@ -33,6 +33,8 @@ class BaseSignal(ABC):
         validate_features_for_signals(features, allow_nans=True)
         alpha = self.compute_alpha(features)
         alpha = alpha.dropna()
+        if alpha.empty:
+            raise ValueError(f"{self.name} alpha is empty after dropna().")
         validate_series_index(alpha, name=f"{self.name} alpha")
         position = self.compute_position(alpha, features)
         if position.isna().any():

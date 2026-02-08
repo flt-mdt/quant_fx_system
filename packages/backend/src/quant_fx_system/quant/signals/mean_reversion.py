@@ -39,6 +39,7 @@ class MeanReversionZScoreSignal(BaseSignal):
                 window=self.config.window, min_periods=self.config.window
             ).sum()
             alpha = -zscore_rolling(momentum, window=self.config.window, epsilon=1e-12)
+        alpha.name = f"neg_z_mom_{self.config.window}"
         return alpha.astype(float)
 
     def compute_position(self, alpha: pd.Series, features: pd.DataFrame) -> pd.Series:
