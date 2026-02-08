@@ -147,16 +147,14 @@ def filter_outliers_by_returns(
     if max_abs_log_return <= 0:
         raise ValueError("max_abs_log_return must be positive.")
 
-    cleaned_price = price.replace([0, -0], np.nan)
-    cleaned_price = cleaned_price.where(cleaned_price > 0)
-    cleaned_price = cleaned_price.dropna()
-    if cleaned_price.empty:
-        raise ValueError("Price series is empty after removing non-positive values.")
+    cleaned_price = price.astype(float).where(price > 0)
 
     log_returns = np.log(cleaned_price).diff()
     mask = log_returns.abs() <= max_abs_log_return
     mask = mask | log_returns.isna()
-    cleaned = cleaned_price[mask]
+    cleaned = cleaned_price[mask].dropna()
+    if cleaned.empty:
+        raise ValueError("Price series is empty after removing non-positive values.")
     return cleaned.rename("price")
 
 
