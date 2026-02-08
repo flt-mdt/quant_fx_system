@@ -52,12 +52,12 @@ Ce dossier contient **3 briques** cohérentes et testées :
 
 ```mermaid
 flowchart LR
-  Raw[Raw FX prices (Series/DataFrame)] --> A[clean_align.clean_price_pipeline]
-  A --> P[price_clean (Series)]
-  P --> F[feature_engineering.build_features (decision_shift)]
-  F --> X[features (DataFrame)]
-  P --> S[stationarity.stationarity_report (ADF + KPSS)]
-  S --> R[report (DataFrame)]
+  Raw[Raw FX prices Series/DataFrame] --> A[clean_align.clean_price_pipeline]
+  A --> P[price_clean Series]
+  P --> F[feature_engineering.build_features decision_shift]
+  F --> X[features DataFrame]
+  P --> S[stationarity.stationarity_report ADF + KPSS]
+  S --> R[report DataFrame]
   T[tests/test_data_pipeline.py] -. verifies .- A
   T -. verifies .- F
   T -. verifies .- S
