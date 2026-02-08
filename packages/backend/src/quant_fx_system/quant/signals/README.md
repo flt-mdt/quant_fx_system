@@ -49,7 +49,7 @@ Le **contrat** est simple :
 
 ```mermaid
 flowchart LR
-  DP[quant/data_pipeline<br/>clean_align + feature_engineering] -->|features (UTC, decision_shift)| SIG[quant/signals<br/>alpha + position]
+  DP[quant/data_pipeline clean_align + feature_engineering] -->|features UTC, decision_shift| SIG[quant/signals alpha + position]
   SIG -->|position series| BT[quant/backtest]
   BT --> EV[quant/evaluation]
 ```
@@ -232,10 +232,6 @@ Ajouts naturels :
 - standardisation cross-asset (normalisation, risk parity inputs)
 - “signal diagnostics” (IC, turnover, exposure stats) côté evaluation/
 
-## Licence
-
-À préciser au niveau du repo (voir `LICENSE` si applicable).
-
 ## Crédits
 
-Équipe Quant FX / Contributors.
+Florian Mauduit.
