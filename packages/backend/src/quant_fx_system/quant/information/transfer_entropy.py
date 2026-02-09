@@ -64,18 +64,17 @@ def transfer_entropy(
 
     total = len(frame)
     te = 0.0
-    for (yt, yp), count in counts_y.items():
-        denom = counts_ypast.get(yp, 0) + _DEF_EPS
-        p_y_given_yp = count / denom
-        for xp in [k[1] for k in counts_ypast_xpast if k[0] == yp]:
-            jkey = (yp, xp)
-            count_joint = counts_joint.get((yt, jkey), 0)
-            if count_joint == 0:
-                continue
-            denom_joint = counts_ypast_xpast.get(jkey, 0) + _DEF_EPS
-            p_y_given_joint = count_joint / denom_joint
-            p_joint = counts_ypast_xpast.get(jkey, 0) / total
-            te += p_joint * np.log((p_y_given_joint + _DEF_EPS) / (p_y_given_yp + _DEF_EPS))
+    for (yt, jkey), count_joint in counts_joint.items():
+        yp, xp = jkey
+        p_triple = count_joint / total
+
+        denom_joint = counts_ypast_xpast.get(jkey, 0) + _DEF_EPS
+        denom_yp = counts_ypast.get(yp, 0) + _DEF_EPS
+
+        p_y_given_joint = count_joint / denom_joint
+        p_y_given_yp = counts_y.get((yt, yp), 0) / denom_yp
+
+        te += p_triple * np.log((p_y_given_joint + _DEF_EPS) / (p_y_given_yp + _DEF_EPS))
     return float(te)
 
 
