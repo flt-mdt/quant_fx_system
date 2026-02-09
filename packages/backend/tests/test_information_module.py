@@ -5,6 +5,8 @@ import pytest
 from quant_fx_system.quant.information import InformationConfig
 from quant_fx_system.quant.information.core import build_information_report
 from quant_fx_system.quant.information.drift import js_divergence, psi
+from quant_fx_system.quant.information.entropy import js_divergence as js_divergence_probs
+from quant_fx_system.quant.information.entropy import joint_entropy
 from quant_fx_system.quant.information.ic import compute_ic
 from quant_fx_system.quant.information.mi import mutual_information
 from quant_fx_system.quant.information.targets import forward_returns
@@ -44,7 +46,7 @@ def test_no_lookahead_in_forward_returns():
     horizon = 3
     target_a = forward_returns(returns_a, horizon)
     target_b = forward_returns(returns_b, horizon)
-    prefix = returns_a.index[:-horizon]
+    prefix = returns_a.index[: -(horizon + 1)]
     ic_a = compute_ic(features.loc[prefix, "f1"], target_a.loc[prefix])
     ic_b = compute_ic(features.loc[prefix, "f1"], target_b.loc[prefix])
     assert np.isclose(ic_a, ic_b, atol=1e-12)
@@ -88,6 +90,28 @@ def test_drift_measures():
 
     assert js_same < js_shift
     assert psi_same < psi_shift
+
+
+def test_js_divergence_properties():
+    rng = np.random.default_rng(5)
+    p = rng.random(10)
+    p = p / p.sum()
+    js_same = js_divergence_probs(p, p)
+    assert np.isclose(js_same, 0.0, atol=1e-12)
+
+    q = rng.random(10)
+    q = q / q.sum()
+    js_val = js_divergence_probs(p, q)
+    assert 0.0 <= js_val <= np.log(2.0) + 1e-12
+
+
+def test_joint_entropy_alignment():
+    x = _make_series([0.0, np.nan, 1.0, 2.0])
+    y = _make_series([0.5, 1.5, np.nan, 2.5])
+    aligned = pd.concat([x, y], axis=1).dropna()
+    je_aligned = joint_entropy(aligned.iloc[:, 0], aligned.iloc[:, 1], bins=3)
+    je_misaligned = joint_entropy(x, y, bins=3)
+    assert np.isclose(je_aligned, je_misaligned, atol=1e-12)
 
 
 def test_information_report_deterministic():

@@ -70,6 +70,28 @@ def _apply_multiple_testing(df: pd.DataFrame, cfg: InformationConfig) -> pd.Data
     return df
 
 
+def _select_te_features(
+    features: pd.DataFrame,
+    ic_report: pd.DataFrame,
+    mi_report: pd.DataFrame,
+    cfg: InformationConfig,
+) -> list[str]:
+    cols = list(features.columns)
+    if cfg.te_features is not None:
+        return [col for col in cfg.te_features if col in features.columns]
+    if cfg.te_top_k is None or cfg.te_top_k >= len(cols):
+        return cols
+
+    score = pd.Series(0.0, index=cols)
+    if "ic_mean" in ic_report.columns:
+        score = ic_report["ic_mean"].abs()
+    if "mi" in mi_report.columns:
+        score = score.where(~score.isna(), mi_report["mi"])
+        score = score.fillna(mi_report["mi"])
+    score = score.fillna(0.0)
+    return score.sort_values(ascending=False).head(cfg.te_top_k).index.tolist()
+
+
 def build_information_report(
     *,
     returns: pd.Series,
@@ -101,14 +123,19 @@ def build_information_report(
 
     te_report = pd.DataFrame()
     if base_signal is not None:
-        te_report = te_matrix(shifted_features, target, cfg)
+        te_features = _select_te_features(shifted_features, ic_report, mi_report, cfg)
+        if len(te_features) > 0:
+            te_report = te_matrix(shifted_features[te_features], target, cfg)
         if cfg.te_significance:
             sig_rows = []
-            for col in shifted_features.columns:
+            for col in te_features:
                 stats = te_significance(shifted_features[col], target, cfg)
                 stats["feature"] = col
                 sig_rows.append(stats)
-            te_report = te_report.join(pd.DataFrame(sig_rows).set_index("feature"))
+            if sig_rows:
+                te_report = te_report.join(
+                    pd.DataFrame(sig_rows).set_index("feature"), how="left"
+                )
 
     drift_df = pd.DataFrame()
     if live_features is not None:

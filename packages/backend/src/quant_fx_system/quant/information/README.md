@@ -39,4 +39,5 @@ report.ic.sort_values("ic_mean", ascending=False).head(20)
 ## Notes
 - IC + MI + drift is a strong filter: stable IC, non-zero MI, low drift.
 - Overlapping horizons require NW/HAC stats for credibility.
-- TE is expensive; reserve for top-K features.
+- Targets use forward log returns as sum over (t+1..t+horizon).
+- TE is expensive; reserve for top-K features or explicitly pass `te_features`.

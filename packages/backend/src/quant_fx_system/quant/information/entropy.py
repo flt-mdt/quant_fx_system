@@ -37,11 +37,12 @@ def joint_entropy(
     bins: int = 10,
     binning: str = "quantile",
 ) -> float:
-    bx = _bin_series(x.dropna(), bins, binning)
-    by = _bin_series(y.dropna(), bins, binning)
-    mask = (~np.isnan(bx)) & (~np.isnan(by))
-    hist = np.histogram2d(bx[mask], by[mask], bins=bins)[0].astype(float)
-    hist = hist + _DEF_EPS
+    aligned = pd.concat([x, y], axis=1).dropna()
+    if aligned.empty:
+        return float("nan")
+    bx = _bin_series(aligned.iloc[:, 0], bins, binning)
+    by = _bin_series(aligned.iloc[:, 1], bins, binning)
+    hist = np.histogram2d(bx, by, bins=bins)[0].astype(float) + _DEF_EPS
     p = hist / hist.sum()
     return float(-np.sum(p * np.log(p)))
 
@@ -54,13 +55,21 @@ def cross_entropy(p: np.ndarray, q: np.ndarray) -> float:
     return float(-np.sum(p * np.log(q)))
 
 
+def _kl(p: np.ndarray, q: np.ndarray) -> float:
+    p = np.asarray(p, dtype=float) + _DEF_EPS
+    q = np.asarray(q, dtype=float) + _DEF_EPS
+    p = p / p.sum()
+    q = q / q.sum()
+    return float(np.sum(p * np.log(p / q)))
+
+
 def js_divergence(p: np.ndarray, q: np.ndarray) -> float:
     p = np.asarray(p, dtype=float) + _DEF_EPS
     q = np.asarray(q, dtype=float) + _DEF_EPS
     p = p / p.sum()
     q = q / q.sum()
     m = 0.5 * (p + q)
-    return 0.5 * cross_entropy(p, m) + 0.5 * cross_entropy(q, m)
+    return 0.5 * _kl(p, m) + 0.5 * _kl(q, m)
 
 
 def surprisal(x: pd.Series, bins: int = 10, binning: str = "quantile") -> pd.Series:
