@@ -110,11 +110,13 @@ def build_information_report(
                 sig_rows.append(stats)
             te_report = te_report.join(pd.DataFrame(sig_rows).set_index("feature"))
 
-    drift_df = (
-        compute_drift_report(shifted_features, live_features, cfg)
-        if live_features is not None
-        else pd.DataFrame()
-    )
+    drift_df = pd.DataFrame()
+    if live_features is not None:
+        common_cols = shifted_features.columns.intersection(live_features.columns)
+        if len(common_cols) > 0:
+            drift_df = compute_drift_report(
+                shifted_features[common_cols], live_features[common_cols], cfg
+            )
 
     redundancy = None
     if shifted_features.shape[1] <= 200:
