@@ -31,6 +31,8 @@ class InformationConfig:
     te_significance: bool = True
     te_perm_runs: int = 200
     te_block_size: int | None = None
+    te_top_k: int | None = 25
+    te_features: tuple[str, ...] | None = None
 
     drift_bins: int = 10
     drift_binning: Literal["quantile", "equal_width"] = "quantile"

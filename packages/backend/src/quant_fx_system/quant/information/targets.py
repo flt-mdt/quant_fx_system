@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 
 
 def forward_returns(returns: pd.Series, horizon: int) -> pd.Series:
+    """Compute forward log returns as sum over (t+1..t+horizon)."""
     if horizon <= 0:
         raise ValueError("horizon must be >= 1")
-    compounded = (1.0 + returns).rolling(window=horizon).apply(np.prod, raw=True) - 1.0
-    return compounded.shift(-horizon + 1)
+    cumsum = returns.cumsum()
+    forward_sum = cumsum.shift(-horizon) - cumsum
+    return forward_sum
 
 
 def binary_up_target(ret_fwd: pd.Series) -> pd.Series:
