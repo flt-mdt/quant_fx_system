@@ -7,6 +7,7 @@ from .types import MetaModelConfig
 
 
 def _forward_returns(returns: pd.Series, horizon: int) -> pd.Series:
+    """Compute forward returns using additive (log) returns."""
     cumsum = returns.cumsum()
     forward_sum = cumsum.shift(-horizon) - cumsum
     return forward_sum
@@ -22,6 +23,7 @@ def meta_label(
     base_signal: pd.Series,
     cfg: MetaModelConfig,
 ) -> pd.Series:
+    """Meta label assumes base_signal is a signed exposure."""
     horizon = cfg.horizon
     r_fwd = _forward_returns(returns, horizon)
     direction = np.sign(base_signal)
