@@ -10,10 +10,10 @@ from .calibration import make_calibrator
 from .cv import build_cv_splits
 from .decision import apply_decision_policy, select_threshold
 from .diagnostics import summarize_oos
-from .labeling import build_labels
+from .labeling import build_labels, forward_returns
 from .models import fit_model
 from .types import MetaModelConfig, MetaModelFit, MetaModelOutput
-from .validation import align_inputs, feature_schema, shift_features
+from .validation import align_inputs, align_predict_inputs, feature_schema, shift_features
 
 
 def _hash_config(cfg: MetaModelConfig) -> str:
@@ -96,10 +96,12 @@ def fit_meta_model(
 
     threshold = None
     if cfg.decision_policy == "threshold" and not oos_predictions.empty:
-        aligned_returns = returns.loc[oos_predictions.index]
-        direction = np.sign(base_signal.loc[oos_predictions.index])
+        shifted_p_follow = oos_predictions["p_follow"].shift(cfg.output_shift)
+        aligned_index = shifted_p_follow.dropna().index
+        aligned_returns = forward_returns(returns=returns, horizon=cfg.horizon).loc[aligned_index]
+        direction = np.sign(base_signal.loc[aligned_index])
         pnl = direction * aligned_returns - (cfg.transaction_cost_bps + cfg.slippage_bps) / 1e4
-        threshold = select_threshold(oos_predictions["p_follow"], pnl)
+        threshold = select_threshold(shifted_p_follow.loc[aligned_index], pnl)
 
     schema = feature_schema(features, cfg)
     metadata = {
@@ -128,8 +130,8 @@ def predict_meta_model(
     regimes: pd.Series | None,
     cfg: MetaModelConfig,
 ) -> MetaModelOutput:
-    _, base_signal, features, regimes = align_inputs(
-        returns=base_signal, base_signal=base_signal, features=features, regimes=regimes
+    base_signal, features, regimes = align_predict_inputs(
+        base_signal=base_signal, features=features, regimes=regimes
     )
     features = _prepare_features(features, cfg)
     expected_cols = fit.feature_schema["columns"]
@@ -151,6 +153,12 @@ def predict_meta_model(
         threshold=threshold,
         cfg=cfg,
     )
+    if cfg.output_shift != 0:
+        p_follow = p_follow.shift(cfg.output_shift)
+        action = action.shift(cfg.output_shift)
+        size = size.shift(cfg.output_shift)
+        if expected_edge is not None:
+            expected_edge = expected_edge.shift(cfg.output_shift)
 
     metadata = {
         "dropped_nan_rows_pred": int((~valid_mask).sum()),
