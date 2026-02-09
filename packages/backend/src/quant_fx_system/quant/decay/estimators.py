@@ -9,8 +9,8 @@ import pandas as pd
 from quant_fx_system.quant.decay.validation import validate_utc_series
 
 
-def estimate_ar1_phi(series: pd.Series) -> float:
-    validate_utc_series(series, "series", allow_nans=True)
+def estimate_ar1_phi(series: pd.Series, *, demean: bool = True) -> float:
+    series = validate_utc_series(series, "series", allow_nans=True)
     values = series.to_numpy(dtype=float)
     x_prev = values[:-1]
     x_next = values[1:]
@@ -19,6 +19,9 @@ def estimate_ar1_phi(series: pd.Series) -> float:
         return float("nan")
     x_prev = x_prev[mask]
     x_next = x_next[mask]
+    if demean:
+        x_prev = x_prev - np.mean(x_prev)
+        x_next = x_next - np.mean(x_next)
     denom = np.dot(x_prev, x_prev)
     if denom == 0:
         return float("nan")
@@ -35,8 +38,8 @@ def estimate_half_life_ar1(series: pd.Series) -> float:
 def ic_decay_curve(
     signal: pd.Series, future_returns: pd.Series, horizons: Iterable[int]
 ) -> pd.Series:
-    validate_utc_series(signal, "signal", allow_nans=True)
-    validate_utc_series(future_returns, "future_returns", allow_nans=True)
+    signal = validate_utc_series(signal, "signal", allow_nans=True)
+    future_returns = validate_utc_series(future_returns, "future_returns", allow_nans=True)
 
     common_index = signal.index.intersection(future_returns.index)
     signal = signal.loc[common_index]
@@ -44,6 +47,9 @@ def ic_decay_curve(
 
     results: dict[int, float] = {}
     for horizon in horizons:
-        shifted = future_returns.shift(-int(horizon))
-        results[int(horizon)] = signal.corr(shifted)
+        horizon_int = int(horizon)
+        if horizon_int < 1:
+            raise ValueError("horizon must be >= 1")
+        shifted = future_returns.shift(-horizon_int)
+        results[horizon_int] = signal.corr(shifted)
     return pd.Series(results, name="ic_decay")
