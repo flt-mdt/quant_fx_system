@@ -16,20 +16,20 @@ def _make_series(values, index, name=None):
 def test_index_invariants():
     index = pd.date_range("2024-01-01", periods=3, freq="D", tz="UTC")
     series = _make_series([0.0, 1.0, 2.0], index)
-    result = apply_decay(series, DecayConfig())
+    result = apply_decay(series, DecayConfig(kind="none"))
     assert result.output.index.equals(index)
 
     naive_index = pd.date_range("2024-01-01", periods=3, freq="D")
     series_naive = _make_series([0.0, 1.0, 2.0], naive_index)
     with pytest.raises(ValueError):
-        apply_decay(series_naive, DecayConfig())
+        apply_decay(series_naive, DecayConfig(kind="none"))
 
     non_monotonic = pd.DatetimeIndex(
         ["2024-01-02", "2024-01-01", "2024-01-03"], tz="UTC"
     )
     series_non_monotonic = _make_series([0.0, 1.0, 2.0], non_monotonic)
     with pytest.raises(ValueError):
-        apply_decay(series_non_monotonic, DecayConfig())
+        apply_decay(series_non_monotonic, DecayConfig(kind="none"))
 
 
 def test_half_life_to_alpha():

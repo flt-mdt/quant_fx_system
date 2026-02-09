@@ -6,7 +6,7 @@ import pandas as pd
 from quant_fx_system.quant.decay.types import DecayConfig
 
 
-def validate_utc_series(series: pd.Series, name: str, allow_nans: bool = False) -> None:
+def validate_utc_series(series: pd.Series, name: str, allow_nans: bool = False) -> pd.Series:
     if not isinstance(series, pd.Series):
         raise TypeError(f"{name} must be a pandas Series")
     if not isinstance(series.index, pd.DatetimeIndex):
@@ -18,12 +18,18 @@ def validate_utc_series(series: pd.Series, name: str, allow_nans: bool = False) 
     if not series.index.is_unique:
         raise ValueError(f"{name} index must be unique")
 
-    numeric = pd.to_numeric(series, errors="raise")
-    values = numeric.to_numpy()
+    numeric = pd.to_numeric(series, errors="raise").astype(float)
+    values = numeric.to_numpy(dtype=float)
     if not allow_nans and np.isnan(values).any():
         raise ValueError(f"{name} contains NaN values")
-    if np.isinf(values).any():
-        raise ValueError(f"{name} contains non-finite values")
+    if allow_nans:
+        finite_mask = ~np.isnan(values)
+        if not np.isfinite(values[finite_mask]).all():
+            raise ValueError(f"{name} contains non-finite values")
+    else:
+        if not np.isfinite(values).all():
+            raise ValueError(f"{name} contains non-finite values")
+    return numeric
 
 
 def validate_config(cfg: DecayConfig) -> None:
@@ -39,10 +45,13 @@ def validate_config(cfg: DecayConfig) -> None:
     if cfg.half_life_time is not None and cfg.half_life_time <= pd.Timedelta(0):
         raise ValueError("half_life_time must be > 0")
 
-    if cfg.alpha is not None and (cfg.half_life_bars is not None or cfg.half_life_time is not None):
-        raise ValueError("alpha cannot be combined with half_life_bars or half_life_time")
-    if cfg.half_life_bars is not None and cfg.half_life_time is not None:
-        raise ValueError("half_life_bars cannot be combined with half_life_time")
+    if cfg.kind == "ewma":
+        decay_params = [cfg.alpha, cfg.half_life_bars, cfg.half_life_time]
+        provided = sum(param is not None for param in decay_params)
+        if provided != 1:
+            raise ValueError(
+                "ewma requires exactly one of alpha, half_life_bars, or half_life_time"
+            )
 
     if cfg.kind in {"linear", "step", "power"}:
         if cfg.window < 2:

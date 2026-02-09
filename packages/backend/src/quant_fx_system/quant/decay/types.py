@@ -17,7 +17,7 @@ class DecayConfig:
 
     # EWMA params
     alpha: Optional[float] = None
-    half_life_bars: Optional[float] = 20.0
+    half_life_bars: Optional[float] = None
     half_life_time: Optional[pd.Timedelta] = None
 
     # Kernel params
