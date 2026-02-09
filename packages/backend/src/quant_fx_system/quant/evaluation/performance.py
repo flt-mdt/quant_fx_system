@@ -47,6 +47,8 @@ def compute_performance_metrics(
     mean_excess = float(excess.mean())
     vol = float(returns.std(ddof=0))
     metrics["vol_annual"] = _annualize_ratio(vol, periods_per_year)
+    if periods_per_year is None:
+        metrics["vol"] = vol
 
     sharpe = _safe_divide(mean_excess, vol)
     if vol == 0.0:

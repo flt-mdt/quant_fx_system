@@ -30,10 +30,10 @@ print(result.tables["rolling_metrics"].tail())
 ## Métriques principales
 - Performance standard : total return, CAGR, vol, Sharpe, Sortino, Calmar, hit rate.
 - Drawdowns : max drawdown, time under water, ulcer index, séries underwater.
-- Distribution : skew, kurtosis, VaR/ES historiques, tail ratio, percentiles.
+- Distribution : skew, kurtosis (non-excess), excess_kurtosis, VaR/ES historiques, tail ratio, percentiles.
 - Benchmark : tracking error, information ratio, alpha/beta, R².
 - Robustesse : PSR, DSR, Sharpe ajusté autocorr, stabilité rolling SR.
 
 ## Notes quant importantes
 - Convention “no lookahead” : si `position` est fourni, on suppose que la convention t-1 a déjà été respectée en amont. L’évaluation ne shift jamais les PnL.
-- Annualisation : dépend de `periods_per_year` (inféré ou override). Si `annualization="none"`, les métriques restent non annualisées.
+- Annualisation : dépend de `periods_per_year` (inféré ou override). Si `annualization="none"`, les métriques restent non annualisées et `vol_annual` est un alias de la volatilité non annualisée (warning dans `metadata`).

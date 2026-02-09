@@ -157,6 +157,6 @@ def evaluate_strategy(
         "index_end": summary["end"],
     }
     if config.annualization == "none":
-        metadata["warnings"] = ["annualization_disabled"]
+        metadata["warnings"] = ["annualization_disabled", "vol_annual_not_annualized"]
 
     return EvaluationResult(summary=summary, tables=tables, series=series, metadata=metadata)

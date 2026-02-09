@@ -27,7 +27,8 @@ def validate_utc_series(
     if not series.index.is_unique:
         raise ValueError(f"{name} index must be unique.")
 
-    values = series.to_numpy()
+    numeric = pd.to_numeric(series, errors="raise")
+    values = numeric.to_numpy()
     if allow_nans:
         mask = ~np.isnan(values)
         if not np.isfinite(values[mask]).all():
@@ -35,7 +36,7 @@ def validate_utc_series(
     else:
         if not np.isfinite(values).all():
             raise ValueError(f"{name} must contain finite values.")
-    return series
+    return numeric
 
 
 def align_series(*series: pd.Series | None) -> tuple[pd.Series | None, ...]:
