@@ -42,13 +42,11 @@ def compute_ic_series(
             [compute_ic(aligned["signal"], aligned["target"], method=method)],
             index=[aligned.index.max()],
         )
-
-    def _rolling_ic(frame: pd.DataFrame) -> float:
-        return compute_ic(frame["signal"], frame["target"], method=method)
-
-    return aligned.rolling(window=window, min_periods=window).apply(_rolling_ic, raw=False)[
-        "signal"
-    ]
+    if method == "spearman":
+        ranked_signal = aligned["signal"].rank()
+        ranked_target = aligned["target"].rank()
+        return ranked_signal.rolling(window=window, min_periods=window).corr(ranked_target)
+    return aligned["signal"].rolling(window=window, min_periods=window).corr(aligned["target"])
 
 
 def ic_by_feature(

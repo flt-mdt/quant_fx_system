@@ -27,6 +27,7 @@ def permutation_test_stat(
         return {"pvalue": float("nan"), "null_mean": float("nan"), "null_std": float("nan")}
     x_vals = xy.iloc[:, 0].to_numpy()
     y_vals = xy.iloc[:, 1].to_numpy()
+    index = xy.index
     null_stats = []
     for _ in range(runs):
         if block_size:
@@ -34,9 +35,9 @@ def permutation_test_stat(
             x_perm = x_vals[indices]
         else:
             x_perm = rng.permutation(x_vals)
-        null_stats.append(stat_fn(pd.Series(x_perm), pd.Series(y_vals)))
+        null_stats.append(stat_fn(pd.Series(x_perm, index=index), pd.Series(y_vals, index=index)))
     null_stats = np.array(null_stats)
-    observed = stat_fn(pd.Series(x_vals), pd.Series(y_vals))
+    observed = stat_fn(pd.Series(x_vals, index=index), pd.Series(y_vals, index=index))
     pvalue = float((np.sum(null_stats >= observed) + 1) / (runs + 1))
     return {
         "pvalue": pvalue,
