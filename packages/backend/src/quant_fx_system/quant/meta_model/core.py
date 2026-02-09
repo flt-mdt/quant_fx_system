@@ -99,7 +99,7 @@ def fit_meta_model(
         shifted_p_follow = oos_predictions["p_follow"].shift(cfg.output_shift)
         aligned_index = shifted_p_follow.dropna().index
         aligned_returns = forward_returns(returns=returns, horizon=cfg.horizon).loc[aligned_index]
-        direction = np.sign(base_signal.loc[aligned_index])
+        direction = np.sign(base_signal.shift(cfg.output_shift).loc[aligned_index])
         pnl = direction * aligned_returns - (cfg.transaction_cost_bps + cfg.slippage_bps) / 1e4
         threshold = select_threshold(shifted_p_follow.loc[aligned_index], pnl)
 
