@@ -46,7 +46,7 @@ def compute_features(
             raise ValueError("Either price or returns must be provided.")
         returns = price.pct_change()
     if price is None:
-        price = (1 + returns).cumprod()
+        price = (1 + returns.fillna(0.0)).cumprod()
 
     data: dict[str, pd.Series] = {}
     data["ret_1"] = returns
@@ -70,6 +70,7 @@ def compute_features(
 
         roll_mean = price.rolling(window, min_periods=window).mean()
         roll_std = price.rolling(window, min_periods=window).std(ddof=0)
+        roll_std = roll_std.replace(0.0, np.nan)
         zscore = (price - roll_mean) / roll_std
         data[f"zscore_price_{window}"] = zscore
 

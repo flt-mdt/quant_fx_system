@@ -33,6 +33,30 @@ def _apply_output_shift(regime: pd.Series, proba: pd.DataFrame | None, shift: in
     return regime_shifted, proba_shifted
 
 
+def _calibration_mask(
+    index: pd.DatetimeIndex,
+    start: pd.Timestamp | None,
+    end: pd.Timestamp | None,
+) -> pd.Series:
+    mask = pd.Series(True, index=index)
+    if start is not None:
+        start_ts = pd.Timestamp(start)
+        mask &= index >= start_ts
+    if end is not None:
+        end_ts = pd.Timestamp(end)
+        mask &= index <= end_ts
+    return mask
+
+
+def _warn_if_full_calibration(
+    metadata: dict,
+    calibration_mask: pd.Series,
+    valid_mask: pd.Series,
+) -> None:
+    if valid_mask.sum() > 0 and (calibration_mask & valid_mask).sum() == valid_mask.sum():
+        metadata["warnings"].append("calibration_full_sample")
+
+
 def infer_regimes(
     *,
     price: pd.Series | None = None,
@@ -48,6 +72,11 @@ def infer_regimes(
         returns = validate_utc_series(returns, "returns", allow_nans=True)
     price, returns = align_series(price, returns)
 
+    price_filled = False
+    if price is None and returns is not None and returns.isna().any():
+        price = (1 + returns.fillna(0.0)).cumprod()
+        price_filled = True
+
     features = compute_features(price, returns, cfg.feature)
     periods_per_year = infer_periods(cfg, features.index)
     metadata = {
@@ -55,8 +84,14 @@ def infer_regimes(
         "periods_per_year": periods_per_year,
         "warnings": [],
     }
+    if price_filled:
+        metadata["warnings"].append("price_from_returns_filled")
     if cfg.feature.annualization == "none":
         metadata["warnings"].append("annualization_disabled")
+    if cfg.calibration_start is not None:
+        metadata["calibration_start"] = cfg.calibration_start
+    if cfg.calibration_end is not None:
+        metadata["calibration_end"] = cfg.calibration_end
 
     regime = None
     proba = None
@@ -67,11 +102,23 @@ def infer_regimes(
         if not vol_cols:
             raise ValueError("Volatility regime requires vol_roll feature.")
         vol = features[vol_cols[0]]
-        regime, proba = label_from_quantiles(vol, cfg.quantile_thresholds)
-        diagnostics = _diagnostics(regime, len(cfg.quantile_thresholds) + 1)
+        calibration_mask = _calibration_mask(vol.index, cfg.calibration_start, cfg.calibration_end)
+        _warn_if_full_calibration(metadata, calibration_mask, vol.notna())
+        regime, proba = label_from_quantiles(
+            vol,
+            cfg.quantile_thresholds,
+            calibration_vol=vol.loc[calibration_mask],
+        )
+        diagnostics = _diagnostics(regime, proba.shape[1])
+        metadata["warnings"].extend(regime.attrs.get("warnings", []))
+        metadata["n_states_effective"] = regime.attrs.get("n_states_effective", proba.shape[1])
 
     elif cfg.method == "trend_range":
-        regime, proba = label_trend_range(features, cfg)
+        calibration_mask = _calibration_mask(features.index, cfg.calibration_start, cfg.calibration_end)
+        slope_cols = [c for c in features.columns if c.startswith("slope_")]
+        valid_mask = ~features[slope_cols[0]].isna() if slope_cols else pd.Series(False, index=features.index)
+        _warn_if_full_calibration(metadata, calibration_mask, valid_mask)
+        regime, proba = label_trend_range(features, cfg, calibration_mask=calibration_mask)
         diagnostics = _diagnostics(regime, 2)
 
     elif cfg.method == "hmm_gaussian":
@@ -88,10 +135,16 @@ def infer_regimes(
         dropped = (~valid_mask).sum()
         if dropped > 0:
             metadata["warnings"].append("dropped_nan_rows")
+        calibration_mask = _calibration_mask(hmm_features.index, cfg.calibration_start, cfg.calibration_end)
+        _warn_if_full_calibration(metadata, calibration_mask, valid_mask)
+        fit_mask = valid_mask & calibration_mask
+        hmm_features_fit = hmm_features.loc[fit_mask]
+        if hmm_features_fit.empty:
+            raise ValueError("HMM calibration window contains no valid rows after NaN filtering.")
         hmm_features_valid = hmm_features.loc[valid_mask]
         if hmm_features_valid.empty:
             raise ValueError("HMM features contain no valid rows after NaN filtering.")
-        params = fit_hmm_gaussian(hmm_features_valid, cfg.hmm)
+        params = fit_hmm_gaussian(hmm_features_fit, cfg.hmm)
         diagnostics.update(
             {
                 "loglik_final": params["loglik_final"],

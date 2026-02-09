@@ -22,10 +22,13 @@ class HMMConfig:
     max_iter: int = 100
     tol: float = 1e-4
     min_var: float = 1e-6
+    min_state_weight: float = 1e-6
+    transition_epsilon: float = 1e-12
     random_seed: int = 42
     init_method: Literal["quantile", "kmeans_simple"] = "quantile"
     mode: Literal["filter", "smooth", "viterbi"] = "filter"
     warm_start: bool = False
+    standardize_features: bool = False
 
 
 @dataclass(frozen=True)
@@ -46,6 +49,8 @@ class RegimeConfig:
     trend_r2_threshold: float = 0.5
     hmm_feature_cols: tuple[str, ...] | None = None
     output_shift: int = 0
+    calibration_start: pd.Timestamp | None = None
+    calibration_end: pd.Timestamp | None = None
 
 
 @dataclass(frozen=True)

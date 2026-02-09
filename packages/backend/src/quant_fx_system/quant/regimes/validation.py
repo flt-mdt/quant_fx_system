@@ -65,6 +65,9 @@ def validate_config(cfg: RegimeConfig) -> None:
         raise ValueError("feature_shift must be >= 0.")
     if cfg.output_shift < 0:
         raise ValueError("output_shift must be >= 0.")
+    if cfg.calibration_start and cfg.calibration_end:
+        if cfg.calibration_start > cfg.calibration_end:
+            raise ValueError("calibration_start must be <= calibration_end.")
 
 
 def infer_periods(cfg: RegimeConfig, index: pd.DatetimeIndex) -> int | None:
