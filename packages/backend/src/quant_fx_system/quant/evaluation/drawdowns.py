@@ -7,6 +7,8 @@ import pandas as pd
 def compute_equity(returns: pd.Series, equity: pd.Series | None = None) -> pd.Series:
     if equity is not None:
         return equity
+    if (1.0 + returns).le(0.0).any():
+        raise ValueError("returns imply non-positive equity; cannot compute drawdowns safely.")
     return (1.0 + returns).cumprod()
 
 

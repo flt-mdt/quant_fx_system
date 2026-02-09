@@ -9,7 +9,9 @@ def compute_distribution_metrics(returns: pd.Series) -> tuple[dict[str, float], 
     tables: dict[str, pd.DataFrame] = {}
 
     summary["skew"] = float(returns.skew())
-    summary["kurtosis"] = float(returns.kurtosis())
+    excess_kurtosis = float(returns.kurtosis())
+    summary["excess_kurtosis"] = excess_kurtosis
+    summary["kurtosis"] = excess_kurtosis + 3.0
 
     var_1 = returns.quantile(0.01)
     summary["var_1pct"] = float(var_1)

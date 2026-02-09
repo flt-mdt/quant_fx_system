@@ -19,9 +19,6 @@ class EvaluationConfig:
     psr_enabled: bool = True
     dsr_enabled: bool = True
     n_trials: int = 1
-    bootstrap_enabled: bool = False
-    bootstrap_samples: int = 2000
-    hac_lags: int | None = None
 
 
 @dataclass(frozen=True)

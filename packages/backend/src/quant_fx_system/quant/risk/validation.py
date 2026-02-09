@@ -18,7 +18,8 @@ def validate_utc_series(series: pd.Series, name: str, allow_nans: bool = False) 
     if not series.index.is_unique:
         raise ValueError(f"{name} index must be unique")
 
-    values = series.to_numpy()
+    numeric = pd.to_numeric(series, errors="raise")
+    values = numeric.to_numpy()
     if not allow_nans and np.isnan(values).any():
         raise ValueError(f"{name} contains NaN values")
     if np.isinf(values).any():

@@ -45,6 +45,14 @@ def test_max_drawdown():
     assert pytest.approx(result.summary["max_drawdown"], rel=1e-6) == 0.2
 
 
+def test_drawdown_rejects_non_positive_equity():
+    index = pd.date_range("2023-01-01", periods=3, freq="D", tz="UTC")
+    returns = _make_series([0.1, -1.0, 0.05], index)
+
+    with pytest.raises(ValueError):
+        evaluate_strategy(returns=returns, cfg=EvaluationConfig(annualization="none"))
+
+
 def test_rolling_metrics_window_two():
     index = pd.date_range("2023-01-01", periods=3, freq="D", tz="UTC")
     returns = _make_series([0.0, 0.1, -0.1], index)
