@@ -71,6 +71,18 @@ def _init_params(features: np.ndarray, cfg: HMMConfig) -> tuple[np.ndarray, np.n
     return pi, A, means, vars_
 
 
+def _standardize(data: np.ndarray, mean: np.ndarray, std: np.ndarray) -> np.ndarray:
+    std_safe = np.where(std == 0, 1.0, std)
+    return (data - mean) / std_safe
+
+
+def _prepare_features(features: pd.DataFrame, params: dict) -> np.ndarray:
+    data = features.to_numpy()
+    if "scaler_mean" in params and "scaler_std" in params:
+        data = _standardize(data, params["scaler_mean"], params["scaler_std"])
+    return data
+
+
 def _forward_backward(
     features: np.ndarray,
     pi: np.ndarray,
@@ -109,6 +121,12 @@ def _forward_backward(
 
 def fit_hmm_gaussian(features: pd.DataFrame, cfg: HMMConfig) -> dict:
     data = features.to_numpy()
+    scaler_mean = None
+    scaler_std = None
+    if cfg.standardize_features:
+        scaler_mean = np.nanmean(data, axis=0)
+        scaler_std = np.nanstd(data, axis=0)
+        data = _standardize(data, scaler_mean, scaler_std)
     pi, A, means, vars_ = _init_params(data, cfg)
 
     loglik_path = []
@@ -117,20 +135,29 @@ def fit_hmm_gaussian(features: pd.DataFrame, cfg: HMMConfig) -> dict:
         gamma, xi_sum, loglik = _forward_backward(data, pi, A, means, vars_)
         loglik_path.append(loglik)
 
-        pi = gamma[0]
-        A = xi_sum / xi_sum.sum(axis=1, keepdims=True)
+        pi = np.maximum(gamma[0], cfg.transition_epsilon)
+        pi = pi / pi.sum()
+        A = xi_sum + cfg.transition_epsilon
+        A = A / A.sum(axis=1, keepdims=True)
 
         weights = gamma.sum(axis=0)
-        means = (gamma.T @ data) / weights[:, None]
+        weights_safe = np.maximum(weights, cfg.min_state_weight)
+        means = (gamma.T @ data) / weights_safe[:, None]
         diff = data[:, None, :] - means[None, :, :]
-        vars_ = (gamma[:, :, None] * diff**2).sum(axis=0) / weights[:, None]
+        vars_ = (gamma[:, :, None] * diff**2).sum(axis=0) / weights_safe[:, None]
         vars_ = np.maximum(vars_, cfg.min_var)
+        dead_states = weights < cfg.min_state_weight
+        if np.any(dead_states):
+            fallback_mean = np.nanmean(data, axis=0)
+            fallback_var = np.nanvar(data, axis=0)
+            means[dead_states] = fallback_mean
+            vars_[dead_states] = np.maximum(fallback_var, cfg.min_var)
 
         if iteration > 0 and abs(loglik_path[-1] - loglik_path[-2]) < cfg.tol:
             converged = True
             break
 
-    return {
+    params = {
         "pi": pi,
         "A": A,
         "means": means,
@@ -140,10 +167,14 @@ def fit_hmm_gaussian(features: pd.DataFrame, cfg: HMMConfig) -> dict:
         "n_iter": len(loglik_path),
         "converged": converged,
     }
+    if cfg.standardize_features:
+        params["scaler_mean"] = scaler_mean
+        params["scaler_std"] = scaler_std
+    return params
 
 
 def hmm_filter(features: pd.DataFrame, params: dict) -> pd.DataFrame:
-    data = features.to_numpy()
+    data = _prepare_features(features, params)
     pi = params["pi"]
     A = params["A"]
     means = params["means"]
@@ -166,14 +197,14 @@ def hmm_filter(features: pd.DataFrame, params: dict) -> pd.DataFrame:
 
 def hmm_smooth(features: pd.DataFrame, params: dict) -> pd.DataFrame:
     gamma, _, _ = _forward_backward(
-        features.to_numpy(), params["pi"], params["A"], params["means"], params["vars"]
+        _prepare_features(features, params), params["pi"], params["A"], params["means"], params["vars"]
     )
     columns = [f"p_state_{i}" for i in range(gamma.shape[1])]
     return pd.DataFrame(gamma, index=features.index, columns=columns)
 
 
 def hmm_viterbi(features: pd.DataFrame, params: dict) -> pd.Series:
-    data = features.to_numpy()
+    data = _prepare_features(features, params)
     pi = params["pi"]
     A = params["A"]
     means = params["means"]

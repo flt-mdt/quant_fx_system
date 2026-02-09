@@ -12,7 +12,8 @@ def transition_matrix(regime: pd.Series, n_states: int) -> pd.DataFrame:
             counts[prev, curr] += 1
     row_sums = counts.sum(axis=1, keepdims=True)
     with np.errstate(divide="ignore", invalid="ignore"):
-        probs = np.divide(counts, row_sums, where=row_sums != 0)
+        probs = np.zeros_like(counts)
+        np.divide(counts, row_sums, out=probs, where=row_sums != 0)
     matrix = pd.DataFrame(probs, columns=range(n_states), index=range(n_states))
     return matrix
 

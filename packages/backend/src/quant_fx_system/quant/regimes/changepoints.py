@@ -3,8 +3,15 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from .validation import validate_utc_series
+
 
 def cusum_flags(series: pd.Series, threshold: float, drift: float) -> pd.Series:
+    if threshold <= 0:
+        raise ValueError("CUSUM threshold must be > 0.")
+    if drift < 0:
+        raise ValueError("CUSUM drift must be >= 0.")
+    series = validate_utc_series(series, "series", allow_nans=True)
     values = series.to_numpy()
     pos_sum = 0.0
     neg_sum = 0.0
