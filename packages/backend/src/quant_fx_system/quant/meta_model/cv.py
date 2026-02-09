@@ -16,6 +16,8 @@ class CvSplit:
 def purged_kfold(n_samples: int, cfg: MetaModelConfig) -> list[CvSplit]:
     if cfg.n_splits < 2:
         raise ValueError("n_splits must be >= 2")
+    effective_purge = max(cfg.purge, cfg.horizon)
+    effective_embargo = max(cfg.embargo, cfg.horizon)
     indices = np.arange(n_samples)
     fold_sizes = np.full(cfg.n_splits, n_samples // cfg.n_splits, dtype=int)
     fold_sizes[: n_samples % cfg.n_splits] += 1
@@ -24,8 +26,8 @@ def purged_kfold(n_samples: int, cfg: MetaModelConfig) -> list[CvSplit]:
     for fold_size in fold_sizes:
         start, stop = current, current + fold_size
         test_idx = indices[start:stop]
-        purge_start = max(start - cfg.purge, 0)
-        purge_stop = min(stop + cfg.embargo, n_samples)
+        purge_start = max(start - effective_purge, 0)
+        purge_stop = min(stop + effective_embargo, n_samples)
         train_mask = np.ones(n_samples, dtype=bool)
         train_mask[purge_start:purge_stop] = False
         train_idx = indices[train_mask]

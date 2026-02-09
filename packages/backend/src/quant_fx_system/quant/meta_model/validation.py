@@ -38,6 +38,27 @@ def align_inputs(
     return returns, base_signal, features, regimes
 
 
+def align_predict_inputs(
+    *,
+    base_signal: pd.Series,
+    features: pd.DataFrame,
+    regimes: pd.Series | None,
+) -> tuple[pd.Series, pd.DataFrame, pd.Series | None]:
+    ensure_utc_index(base_signal, "base_signal")
+    ensure_utc_index(features, "features")
+    if regimes is not None:
+        ensure_utc_index(regimes, "regimes")
+
+    common = base_signal.index.intersection(features.index)
+    if regimes is not None:
+        common = common.intersection(regimes.index)
+
+    base_signal = base_signal.loc[common]
+    features = features.loc[common]
+    regimes = regimes.loc[common] if regimes is not None else None
+    return base_signal, features, regimes
+
+
 def shift_features(features: pd.DataFrame, cfg: MetaModelConfig) -> pd.DataFrame:
     return features.shift(cfg.feature_shift)
 

@@ -12,6 +12,10 @@ def _forward_returns(returns: pd.Series, horizon: int) -> pd.Series:
     return forward_sum
 
 
+def forward_returns(*, returns: pd.Series, horizon: int) -> pd.Series:
+    return _forward_returns(returns, horizon)
+
+
 def meta_label(
     *,
     returns: pd.Series,
@@ -31,8 +35,8 @@ def meta_label(
 def return_sign_label(*, returns: pd.Series, cfg: MetaModelConfig) -> pd.Series:
     horizon = cfg.horizon
     r_fwd = _forward_returns(returns, horizon)
-    label = np.sign(r_fwd)
-    label = label.replace(0, np.nan)
+    label = (r_fwd > 0).astype(float)
+    label = label.where(r_fwd != 0, np.nan)
     return label
 
 
