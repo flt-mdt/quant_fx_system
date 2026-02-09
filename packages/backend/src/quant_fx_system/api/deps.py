@@ -151,9 +151,9 @@ class SQLiteStorage:
 
 
 @lru_cache(maxsize=1)
-def _get_storage(settings: Settings) -> SQLiteStorage:
-    return SQLiteStorage(settings.database_path)
+def _get_storage(db_path: Path) -> SQLiteStorage:
+    return SQLiteStorage(db_path)
 
 
 def get_storage(settings: Settings = Depends(get_settings)) -> SQLiteStorage:
-    return _get_storage(settings)
+    return _get_storage(settings.database_path)
