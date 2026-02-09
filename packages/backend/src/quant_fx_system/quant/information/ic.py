@@ -1,101 +1,136 @@
 from __future__ import annotations
 
 import math
-from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
 
 
-CorrelationMethod = Literal["pearson", "spearman"]
+def _normal_cdf(x: float) -> float:
+    return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
 
 
-def _corr(a: pd.Series, b: pd.Series, method: CorrelationMethod) -> float:
+def _prepare(signal: pd.Series, target: pd.Series, method: str) -> tuple[np.ndarray, np.ndarray]:
+    aligned = pd.concat([signal, target], axis=1).dropna()
+    x = aligned.iloc[:, 0].to_numpy(dtype=float)
+    y = aligned.iloc[:, 1].to_numpy(dtype=float)
     if method == "spearman":
-        return float(a.rank().corr(b.rank()))
-    return float(a.corr(b))
+        x = pd.Series(x).rank().to_numpy(dtype=float)
+        y = pd.Series(y).rank().to_numpy(dtype=float)
+    return x, y
+
+
+def compute_ic(signal: pd.Series, target: pd.Series, method: str = "spearman") -> float:
+    if method not in {"spearman", "pearson"}:
+        raise ValueError("method must be 'spearman' or 'pearson'")
+    x, y = _prepare(signal, target, method)
+    if len(x) < 2:
+        return float("nan")
+    return float(np.corrcoef(x, y)[0, 1])
 
 
 def compute_ic_series(
     signal: pd.Series,
     target: pd.Series,
     window: int | None = None,
-    method: CorrelationMethod = "spearman",
+    method: str = "spearman",
 ) -> pd.Series:
-    aligned = pd.concat([signal, target], axis=1).dropna()
-    if aligned.empty:
-        return pd.Series(dtype=float)
+    aligned = pd.concat([signal, target], axis=1)
+    aligned.columns = ["signal", "target"]
     if window is None:
-        return pd.Series([_corr(aligned.iloc[:, 0], aligned.iloc[:, 1], method)])
-    if method == "pearson":
-        return aligned.iloc[:, 0].rolling(window).corr(aligned.iloc[:, 1]).dropna()
-    return aligned.rolling(window).apply(
-        lambda frame: _corr(frame.iloc[:, 0], frame.iloc[:, 1], method),
-        raw=False,
-    ).iloc[:, 0].dropna()
+        return pd.Series(
+            [compute_ic(aligned["signal"], aligned["target"], method=method)],
+            index=[aligned.index.max()],
+        )
+    if method == "spearman":
+        ranked_signal = aligned["signal"].rank()
+        ranked_target = aligned["target"].rank()
+        return ranked_signal.rolling(window=window, min_periods=window).corr(ranked_target)
+    return aligned["signal"].rolling(window=window, min_periods=window).corr(aligned["target"])
 
 
-def _nw_tstat(values: np.ndarray, lags: int | None = None) -> float:
-    n = len(values)
-    if n == 0:
-        return float("nan")
-    mean = np.mean(values)
-    if lags is None:
-        lags = int(np.sqrt(n))
-    lags = max(0, min(lags, n - 1))
-    demeaned = values - mean
-    gamma0 = np.mean(demeaned * demeaned)
-    var = gamma0
-    for lag in range(1, lags + 1):
-        cov = np.mean(demeaned[lag:] * demeaned[:-lag])
-        weight = 1.0 - lag / (lags + 1)
-        var += 2.0 * weight * cov
-    if var <= 0:
-        return float("nan")
-    return float(mean / np.sqrt(var / n))
-
-
-def ic_stats(
-    signal: pd.Series,
+def ic_by_feature(
+    features: pd.DataFrame,
     target: pd.Series,
+    method: str = "spearman",
     window: int | None = None,
-    method: CorrelationMethod = "spearman",
     nw_lags: int | None = None,
-) -> dict[str, Any]:
-    aligned = pd.concat([signal, target], axis=1).dropna()
-    if aligned.empty:
+) -> pd.DataFrame:
+    rows = []
+    for col in features.columns:
+        ic_series = compute_ic_series(features[col], target, window=window, method=method)
+        stats = ic_stats(ic_series, nw_lags=nw_lags)
+        stats["feature"] = col
+        rows.append(stats)
+    return pd.DataFrame(rows).set_index("feature")
+
+
+def _nw_variance(series: np.ndarray, lags: int) -> float:
+    n = len(series)
+    mean = series.mean()
+    gamma0 = np.sum((series - mean) ** 2) / n
+    variance = gamma0
+    for lag in range(1, lags + 1):
+        weight = 1.0 - lag / (lags + 1.0)
+        cov = np.sum((series[lag:] - mean) * (series[:-lag] - mean)) / n
+        variance += 2.0 * weight * cov
+    return variance
+
+
+def ic_stats(ic_series: pd.Series, nw_lags: int | None) -> dict:
+    ic_values = ic_series.dropna().to_numpy(dtype=float)
+    n_obs = len(ic_values)
+    if n_obs == 0:
         return {
             "ic_mean": float("nan"),
             "ic_std": float("nan"),
+            "ic_ir": float("nan"),
             "tstat": float("nan"),
             "pvalue": float("nan"),
             "n_obs": 0,
+            "nw_lags": nw_lags or 0,
         }
 
-    ic_series = compute_ic_series(signal, target, window=window, method=method)
-    ic_mean = float(ic_series.mean())
-    if window is None or len(ic_series) <= 1:
-        return {
-            "ic_mean": ic_mean,
-            "ic_std": float("nan"),
-            "tstat": float("nan"),
-            "pvalue": float("nan"),
-            "n_obs": len(aligned),
-        }
-
-    ic_std = float(ic_series.std(ddof=1))
-    n_obs = len(ic_series)
-    tstat = _nw_tstat(ic_series.to_numpy(), lags=nw_lags)
-    if math.isnan(tstat) and ic_std != 0:
-        tstat = ic_mean / (ic_std / math.sqrt(n_obs))
-    if math.isnan(tstat):
-        pvalue = float("nan")
-    else:
-        pvalue = 2.0 * (1.0 - 0.5 * (1.0 + math.erf(abs(tstat) / math.sqrt(2.0))))
+    mean = float(np.mean(ic_values))
+    std = float(np.std(ic_values, ddof=1)) if n_obs > 1 else float("nan")
+    ic_ir = mean / std if std and not math.isnan(std) else float("nan")
+    lags = nw_lags or 0
+    variance = _nw_variance(ic_values, lags) if lags > 0 else float(np.var(ic_values))
+    se = math.sqrt(variance / n_obs) if variance > 0 else float("nan")
+    tstat = mean / se if se and not math.isnan(se) else float("nan")
+    pvalue = 2.0 * (1.0 - _normal_cdf(abs(tstat))) if not math.isnan(tstat) else float("nan")
     return {
-        "ic_mean": ic_mean,
-        "ic_std": ic_std,
-        "tstat": float(tstat),
-        "pvalue": float(pvalue),
+        "ic_mean": mean,
+        "ic_std": std,
+        "ic_ir": ic_ir,
+        "tstat": tstat,
+        "pvalue": pvalue,
         "n_obs": n_obs,
+        "nw_lags": lags,
     }
+
+
+def ic_decay(signal: pd.Series, returns: pd.Series, horizons: list[int]) -> pd.DataFrame:
+    rows = []
+    from .targets import forward_returns
+
+    for horizon in horizons:
+        target = forward_returns(returns, horizon)
+        ic = compute_ic(signal, target, method="spearman")
+        rows.append({"horizon": horizon, "ic": ic})
+    return pd.DataFrame(rows).set_index("horizon")
+
+
+def ic_conditional(
+    signal: pd.Series,
+    target: pd.Series,
+    regimes: pd.Series,
+    method: str = "spearman",
+) -> pd.DataFrame:
+    aligned = pd.concat([signal, target, regimes], axis=1).dropna()
+    aligned.columns = ["signal", "target", "regime"]
+    rows = []
+    for regime, frame in aligned.groupby("regime"):
+        ic = compute_ic(frame["signal"], frame["target"], method=method)
+        rows.append({"regime": regime, "ic": ic, "n_obs": len(frame)})
+    return pd.DataFrame(rows).set_index("regime")
