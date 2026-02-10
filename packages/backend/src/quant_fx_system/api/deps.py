@@ -102,9 +102,15 @@ class SQLiteStorage:
             for row in rows
         ]
 
-    def save_backtest(self, request: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
-        record_id = uuid4().hex
-        created_at = _utc_now().isoformat()
+    def save_backtest(
+        self,
+        request: Dict[str, Any],
+        result: Dict[str, Any],
+        record_id: str | None = None,
+        created_at: str | None = None,
+    ) -> Dict[str, Any]:
+        record_id = record_id or uuid4().hex
+        created_at = created_at or _utc_now().isoformat()
         with self._connect() as connection:
             connection.execute(
                 "INSERT INTO backtests (id, created_at, request, result) VALUES (?, ?, ?, ?)",
