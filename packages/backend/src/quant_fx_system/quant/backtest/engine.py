@@ -55,10 +55,9 @@ def run_backtest(
     position_applied = position_applied.fillna(0.0)
     position_applied.name = "position"
 
-    turnover = compute_turnover(position_aligned).reindex(returns.index).fillna(0.0)
+    turnover = compute_turnover(position_applied).reindex(returns.index).fillna(0.0)
     turnover.name = "turnover"
-    costs_for_return = turnover.shift(1).reindex(returns.index).fillna(0.0)
-    costs = compute_costs(costs_for_return, cfg.transaction_cost_bps, cfg.slippage_bps)
+    costs = compute_costs(turnover, cfg.transaction_cost_bps, cfg.slippage_bps)
     costs.name = "costs"
 
     pnl = position_applied * returns - costs
@@ -71,7 +70,7 @@ def run_backtest(
         "execution": cfg.execution,
         "return_type": cfg.return_type,
         "pnl_convention": "returns_end_time",
-        "costs_alignment": "turnover_shifted_one_period",
+        "costs_alignment": "trade_aligned_with_applied_position",
         "start": returns.index.min(),
         "end": returns.index.max(),
     }
