@@ -16,7 +16,10 @@ class Settings(BaseSettings):
     log_level: str = Field("INFO", description="Logging level")
     environment: str = Field("production", description="Deployment environment")
     data_dir: Path = Field(Path("/data"), description="Storage directory for state")
-    cors_origins: List[str] = Field(default_factory=list, description="CORS origins")
+    cors_origins: List[str] = Field(
+        default_factory=lambda: ["https://quant-fx-backtest.lovable.app"],
+        description="CORS origins",
+    )
 
     model_config = SettingsConfigDict(
         env_prefix="QFX_",
