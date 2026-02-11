@@ -20,6 +20,7 @@ def _payload() -> dict:
             ],
             "prices": [1.0763, 1.0880, 1.0969, 1.0922],
             "signals": [1, -1, -1, 1],
+            "input_type": "position_target",
         },
         "config": {
             "initial_cash": 100000,
@@ -120,3 +121,35 @@ def test_backtest_rejects_non_monotonic_timestamps(tmp_path: Path):
         response = client.post("/api/v1/backtests", json=payload)
         assert response.status_code == 400
         assert "strictly increasing" in response.json()["detail"]
+
+
+def test_backtest_rejects_unknown_input_type(tmp_path: Path):
+    app = create_app()
+    storage = SQLiteStorage(tmp_path / "api_contract_input_type.db")
+    app.dependency_overrides[get_storage] = lambda: storage
+
+    payload = _payload()
+    payload["dataset"]["input_type"] = "signal"
+
+    with TestClient(app) as client:
+        response = client.post("/api/v1/backtests", json=payload)
+        assert response.status_code == 422
+        assert "input_type" in str(response.json()["detail"])
+
+
+def test_backtest_metadata_uses_engine_truth(tmp_path: Path):
+    app = create_app()
+    storage = SQLiteStorage(tmp_path / "api_contract_truth.db")
+    app.dependency_overrides[get_storage] = lambda: storage
+
+    payload = _payload()
+    payload["config"]["pnl_convention"] = "not_engine_truth"
+    payload["config"]["costs_alignment"] = "not_engine_truth"
+
+    with TestClient(app) as client:
+        response = client.post("/api/v1/backtests", json=payload)
+        assert response.status_code == 201
+        body = response.json()
+        used = body["metadata"]["config_used"]
+        assert used["pnl_convention"] == "returns_end_time"
+        assert used["costs_alignment"] == "trade_aligned_with_applied_position"

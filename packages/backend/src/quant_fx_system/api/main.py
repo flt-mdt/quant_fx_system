@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from quant_fx_system.api.routes import backtest, health, history, state
+from quant_fx_system.api.routes import backtest, health, history, state, strategy_runs
 from quant_fx_system.logging_config import configure_logging
 from quant_fx_system.settings import get_settings
 
@@ -36,6 +36,7 @@ def create_app() -> FastAPI:
     app.include_router(state.router, prefix=api_prefix, tags=["state"])
     app.include_router(backtest.router, prefix=api_prefix, tags=["backtest"])
     app.include_router(history.router, prefix=api_prefix, tags=["history"])
+    app.include_router(strategy_runs.router, prefix=api_prefix, tags=["strategy-runs"])
 
     return app
 

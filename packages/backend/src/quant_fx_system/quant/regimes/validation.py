@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from quant_fx_system.quant.evaluation.periods import infer_periods_per_year
-from .types import RegimeConfig
+from .types import FeatureConfig, RegimeConfig
 
 
 def validate_utc_series(
@@ -70,11 +70,12 @@ def validate_config(cfg: RegimeConfig) -> None:
             raise ValueError("calibration_start must be <= calibration_end.")
 
 
-def infer_periods(cfg: RegimeConfig, index: pd.DatetimeIndex) -> int | None:
-    if cfg.feature.annualization == "none":
+def infer_periods(cfg: RegimeConfig | FeatureConfig, index: pd.DatetimeIndex) -> int | None:
+    feature_cfg = cfg.feature if isinstance(cfg, RegimeConfig) else cfg
+    if feature_cfg.annualization == "none":
         return None
-    if cfg.feature.periods_per_year_override is not None:
-        return cfg.feature.periods_per_year_override
+    if feature_cfg.periods_per_year_override is not None:
+        return feature_cfg.periods_per_year_override
     return infer_periods_per_year(index)
 
 

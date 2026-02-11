@@ -30,11 +30,14 @@ class CleanAlignConfig:
     enable_outlier_filter: bool = True
 
 
-def _ensure_datetime_index(index: pd.Index, *, tz_assume: str) -> pd.DatetimeIndex:
-    if isinstance(index, pd.DatetimeIndex):
+def _ensure_datetime_index(index: pd.Index | pd.Series, *, tz_assume: str) -> pd.DatetimeIndex:
+    if isinstance(index, pd.Series):
+        parsed = pd.to_datetime(index, errors="raise")
+        dt_index = pd.DatetimeIndex(parsed)
+    elif isinstance(index, pd.DatetimeIndex):
         dt_index = index
     else:
-        dt_index = pd.to_datetime(index, errors="raise")
+        dt_index = pd.DatetimeIndex(pd.to_datetime(index, errors="raise"))
 
     if dt_index.tz is None:
         dt_index = dt_index.tz_localize(tz_assume, ambiguous="raise", nonexistent="raise")
