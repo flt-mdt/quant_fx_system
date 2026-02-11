@@ -1,74 +1,50 @@
 # Quant FX System
 
-A monorepo skeleton for a quantitative EUR/USD trading system. This repository is intentionally **structure-only**: it provides a clean, DDD-ish architecture for both backend and frontend, with placeholders for future implementation.
-
-## Goals
-- Separate **core quant** logic from delivery mechanisms (API/UI/CLI).
-- Provide a deployable FastAPI backend (Render-friendly) and a React + TypeScript dashboard.
-- Establish strong conventions early (linting, typing, testing, docs).
+A monorepo for a quantitative EUR/USD trading system with a FastAPI backend and React frontend.
 
 ## Architecture (High-level)
-- **Core quant** lives in `packages/backend/src/quant_fx_system/quant/`.
-- **DDD-ish layers** for the backend:
-  - `domain/` (entities + ports)
-  - `application/` (use-cases orchestration)
-  - `infrastructure/` (adapters to real services)
-  - `api/` (FastAPI delivery)
-- **Frontend UI** follows DDD-ish boundaries:
-  - `app/` (composition)
-  - `domains/` (bounded contexts)
-  - `shared/` (cross-cutting UI + API utilities)
-  - `pages/` (route-level screens)
+- Core quant logic in `packages/backend/src/quant_fx_system/quant/`.
+- Backend layered structure:
+  - `domain/` (entities + ports, partly placeholder)
+  - `application/` (orchestration services)
+  - `infrastructure/` (adapters)
+  - `api/` (FastAPI routes + schemas)
 
-## Monorepo Layout
-```
-quant-fx-system/
-├── packages/
-│   ├── backend/     # FastAPI + core quant (Python)
-│   └── frontend/    # React + TS dashboard (Vite)
-├── docs/            # architecture, API contracts, ADRs
-├── config/          # YAML config placeholders
-├── infra/           # deployment notes (Render) + optional nginx
-├── data/            # raw/processed/features (gitkept)
-└── scripts/         # repo bootstrap utilities
-```
+## API Contract Overview (current)
+- `GET /api/v1/health`
+- `GET /api/v1/state`
+- `PUT /api/v1/state`
+- `GET /api/v1/states`
+- `POST /api/v1/backtests`
+- `GET /api/v1/backtests/{backtest_id}`
+- `GET /api/v1/history/backtests`
+- `GET /api/v1/history/states`
+- `POST /api/v1/datasets/excel:ingest`
+- `POST /api/v1/strategy-runs`
+- `GET /api/v1/strategy-runs/{run_id}`
+- `GET /api/v1/strategy-runs/{run_id}/diagnostics`
+- `GET /api/v1/strategy-runs/{run_id}/trace?timestamp=...`
+- `GET /api/v1/strategy-runs/capabilities`
 
-## Backend (FastAPI, Render)
-- **Local run (placeholder):**
-  - `make backend-dev`
-- **Render build/start (placeholder):**
-  - See `packages/backend/render-start.sh` and `infra/render/README.md`.
+## Excel-first strategy run flow
+`prices -> clean/align -> features -> signals_pack -> optional regimes/information/meta -> risk overlay -> position_target -> backtest accounting -> evaluation`
 
-## Frontend (React + Vite)
-- **Local run (placeholder):**
-  - `pnpm dev`
+### Frontend handoff notes
+Backend returns stable high-level fields for frontend integration:
+- `signals_pack`
+- `position_target`
+- `backtest.summary`, `backtest.series`, `backtest.engine_metadata`
+- `evaluation.summary`
+- `diagnostics`
+- `metadata.research_hygiene`
 
-## API Contract Overview
-Planned endpoints:
-- `GET /health`
-- `GET /state/latest`
-- `GET /state/history?from=...&to=...`
-- `POST /backtest/run`
-- `GET /backtest/{id}`
+Series payload controls are available on run retrieval (`summary_only`, `stride`, `start`, `end`).
 
-See `docs/api-contract.md` for the initial `QuantState` JSON schema.
+## Known limitations
+- Var/ES risk overlay is not implemented yet (explicit capability flag).
+- Some domain/infrastructure modules remain placeholders.
+- TP/SL intrabar simulation is not supported for close-only daily inputs.
 
-## Environment Variables
-- Root `.env.example` documents shared defaults.
-- Backend and frontend each provide their own `.env.example` with scoped settings.
-
-## Coding Standards
-- **Backend:** ruff, mypy, pytest (Python 3.11+, src layout).
-- **Frontend:** strict TypeScript, linting/formatting via tooling placeholders.
-- **CI:** `.github/workflows/ci.yml` is a placeholder for lint/test pipelines.
-
-## Live “State” Flow (planned)
-A background job periodically computes:
-`features → signals → regimes → decay → meta-proba → decision`
-
-It writes a **QuantState** JSON snapshot to a state store (filesystem/SQLite).
-The UI polls `/state/latest` and `/state/history` every 30–60s.
-
----
-
-This repository is a **skeleton only**. All files are placeholders with minimal headers.
+## Frontend integration package
+- Strategy-run handoff guide: `docs/frontend-handoff-strategy-runs.md`
+- API contract details: `docs/api-contract.md`

@@ -61,6 +61,26 @@ class SQLiteStorage:
                 )
                 """
             )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS datasets (
+                    id TEXT PRIMARY KEY,
+                    created_at TEXT NOT NULL,
+                    request TEXT NOT NULL,
+                    result TEXT NOT NULL
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS strategy_runs (
+                    id TEXT PRIMARY KEY,
+                    created_at TEXT NOT NULL,
+                    request TEXT NOT NULL,
+                    result TEXT NOT NULL
+                )
+                """
+            )
             connection.commit()
 
     def save_state(self, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -144,6 +164,70 @@ class SQLiteStorage:
         with self._connect() as connection:
             row = connection.execute(
                 "SELECT id, created_at, request, result FROM backtests WHERE id = ?",
+                (record_id,),
+            ).fetchone()
+        if not row:
+            return None
+        return {
+            "id": row["id"],
+            "created_at": row["created_at"],
+            "request": json.loads(row["request"]),
+            "result": json.loads(row["result"]),
+        }
+
+    def save_dataset(
+        self,
+        request: Dict[str, Any],
+        result: Dict[str, Any],
+        record_id: str | None = None,
+        created_at: str | None = None,
+    ) -> Dict[str, Any]:
+        record_id = record_id or uuid4().hex
+        created_at = created_at or _utc_now().isoformat()
+        with self._connect() as connection:
+            connection.execute(
+                "INSERT INTO datasets (id, created_at, request, result) VALUES (?, ?, ?, ?)",
+                (record_id, created_at, _json_dumps(request), _json_dumps(result)),
+            )
+            connection.commit()
+        return {"id": record_id, "created_at": created_at, "request": request, "result": result}
+
+    def get_dataset(self, record_id: str) -> Optional[Dict[str, Any]]:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT id, created_at, request, result FROM datasets WHERE id = ?",
+                (record_id,),
+            ).fetchone()
+        if not row:
+            return None
+        return {
+            "id": row["id"],
+            "created_at": row["created_at"],
+            "request": json.loads(row["request"]),
+            "result": json.loads(row["result"]),
+        }
+
+    def save_strategy_run(
+        self,
+        request: Dict[str, Any],
+        result: Dict[str, Any],
+        record_id: str | None = None,
+        created_at: str | None = None,
+    ) -> Dict[str, Any]:
+        record_id = record_id or uuid4().hex
+        created_at = created_at or _utc_now().isoformat()
+        with self._connect() as connection:
+            connection.execute(
+                "INSERT INTO strategy_runs (id, created_at, request, result) VALUES (?, ?, ?, ?)",
+                (record_id, created_at, _json_dumps(request), _json_dumps(result)),
+            )
+            connection.commit()
+        return {"id": record_id, "created_at": created_at, "request": request, "result": result}
+
+    def get_strategy_run(self, record_id: str) -> Optional[Dict[str, Any]]:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT id, created_at, request, result FROM strategy_runs WHERE id = ?",
                 (record_id,),
             ).fetchone()
         if not row:

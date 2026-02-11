@@ -25,6 +25,7 @@ class BacktestDatasetRequest(BaseModel):
     timestamps_utc: list[datetime]
     prices: list[float]
     signals: list[float]
+    input_type: Literal["position_target"] = "position_target"
 
 
 class BacktestConfigRequest(BaseModel):
@@ -171,6 +172,8 @@ def _dataset_to_series(dataset: BacktestDatasetRequest) -> tuple[pd.Series, pd.S
         raise ValueError("dataset.timestamps_utc must not be empty")
     if len(dataset.prices) != len(timestamps) or len(dataset.signals) != len(timestamps):
         raise ValueError("dataset.timestamps_utc, dataset.prices and dataset.signals must have identical lengths")
+    if dataset.input_type != "position_target":
+        raise ValueError("dataset.input_type must be 'position_target'")
 
     duplicate_timestamps = int(pd.Index(timestamps).duplicated().sum())
     non_monotonic_timestamps = _count_non_monotonic(timestamps)
@@ -371,10 +374,10 @@ def _build_response_payload(
 
     metadata = BacktestMetadata(
         config_used=ConfigUsedMetadata(
-            execution=request.config.execution,
-            return_type=request.config.return_type,
-            pnl_convention=request.config.pnl_convention,
-            costs_alignment=request.config.costs_alignment,
+            execution=str(result.metadata.get("execution", request.config.execution)),
+            return_type=str(result.metadata.get("return_type", request.config.return_type)),
+            pnl_convention=str(result.metadata.get("pnl_convention", request.config.pnl_convention)),
+            costs_alignment=str(result.metadata.get("costs_alignment", request.config.costs_alignment)),
             annualization_factor=request.config.annualization_factor,
         ),
         data_quality=quality,
