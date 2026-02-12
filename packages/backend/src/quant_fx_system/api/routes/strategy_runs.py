@@ -235,10 +235,16 @@ def _hash_obj(payload: Any) -> str:
 
 
 def _to_json_safe(payload: Any) -> Any:
-    """Recursively coerce numpy scalar values to native Python types."""
+    """Recursively coerce numpy values to JSON-safe Python types."""
 
     if isinstance(payload, dict):
-        return {key: _to_json_safe(value) for key, value in payload.items()}
+        normalized: dict[Any, Any] = {}
+        for key, value in payload.items():
+            safe_key = _to_json_safe(key)
+            if not isinstance(safe_key, (str, int, float, bool, type(None))):
+                safe_key = str(safe_key)
+            normalized[safe_key] = _to_json_safe(value)
+        return normalized
     if isinstance(payload, list):
         return [_to_json_safe(value) for value in payload]
     if isinstance(payload, tuple):
