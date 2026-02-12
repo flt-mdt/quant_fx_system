@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 from fastapi.testclient import TestClient
 
 from quant_fx_system.api.deps import SQLiteStorage, get_storage
@@ -159,3 +160,15 @@ def test_capabilities_endpoint(tmp_path: Path) -> None:
         body = cap.json()
         assert body["meta_model"]["supported"] is True
         assert body["risk"]["var_es_supported"] is False
+
+
+def test_to_json_safe_normalizes_numpy_keys_and_values() -> None:
+    from quant_fx_system.api.routes.strategy_runs import _to_json_safe
+
+    payload = {np.int64(1): {"nested": np.int64(2)}, "ok": [np.float64(1.5)]}
+    sanitized = _to_json_safe(payload)
+
+    assert 1 in sanitized
+    assert sanitized[1]["nested"] == 2
+    assert isinstance(sanitized[1]["nested"], int)
+    assert sanitized["ok"] == [1.5]
