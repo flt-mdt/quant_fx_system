@@ -172,3 +172,26 @@ def test_to_json_safe_normalizes_numpy_keys_and_values() -> None:
     assert sanitized[1]["nested"] == 2
     assert isinstance(sanitized[1]["nested"], int)
     assert sanitized["ok"] == [1.5]
+
+
+def test_strategy_run_response_serializes_numpy_scalars_in_any_payload(tmp_path: Path, monkeypatch) -> None:
+    from quant_fx_system.api.routes import strategy_runs as strategy_runs_route
+
+    original = strategy_runs_route.run_signal_pipeline
+
+    def _run_signal_pipeline_with_numpy_metadata(*args, **kwargs):
+        payload = original(*args, **kwargs)
+        payload["metadata"]["numpy_scalar"] = np.int64(7)
+        return payload
+
+    monkeypatch.setattr(strategy_runs_route, "run_signal_pipeline", _run_signal_pipeline_with_numpy_metadata)
+
+    with _client(tmp_path) as client:
+        run = client.post(
+            "/api/v1/strategy-runs",
+            json={"name": "numpy-safe", "dataset": _dataset_payload()},
+        )
+        assert run.status_code == 201
+        body = run.json()
+        assert body["metadata"]["inference"]["numpy_scalar"] == 7
+        assert isinstance(body["metadata"]["inference"]["numpy_scalar"], int)

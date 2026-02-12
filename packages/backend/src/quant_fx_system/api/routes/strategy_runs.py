@@ -763,13 +763,15 @@ def run_strategy(request: StrategyRunRequest, storage: SQLiteStorage = Depends(g
         },
     )
 
+    result_payload = _to_json_safe(result.model_dump(mode="python"))
+
     storage.save_strategy_run(
         request.model_dump(mode="json"),
-        _to_json_safe(result.model_dump(mode="python")),
+        result_payload,
         record_id=run_id,
         created_at=created_at,
     )
-    return result
+    return StrategyRunResponse.model_validate(result_payload)
 
 
 @router.get("/strategy-runs/{run_id}", response_model=StrategyRunResponse)
