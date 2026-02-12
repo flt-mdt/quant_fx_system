@@ -234,6 +234,24 @@ def _hash_obj(payload: Any) -> str:
     return sha256(str(payload).encode("utf-8")).hexdigest()[:16]
 
 
+def _to_json_safe(payload: Any) -> Any:
+    """Recursively coerce numpy scalar values to native Python types."""
+
+    if isinstance(payload, dict):
+        return {key: _to_json_safe(value) for key, value in payload.items()}
+    if isinstance(payload, list):
+        return [_to_json_safe(value) for value in payload]
+    if isinstance(payload, tuple):
+        return [_to_json_safe(value) for value in payload]
+    if isinstance(payload, set):
+        return [_to_json_safe(value) for value in payload]
+
+    if payload.__class__.__module__.startswith("numpy") and hasattr(payload, "item"):
+        return payload.item()
+
+    return payload
+
+
 def _rows_to_frame(rows: list[PriceRow]) -> pd.DataFrame:
     return pd.DataFrame({"timestamp_utc": [r.timestamp_utc for r in rows], "price": [r.price for r in rows]})
 
@@ -739,7 +757,12 @@ def run_strategy(request: StrategyRunRequest, storage: SQLiteStorage = Depends(g
         },
     )
 
-    storage.save_strategy_run(request.model_dump(mode="json"), result.model_dump(mode="json"), record_id=run_id, created_at=created_at)
+    storage.save_strategy_run(
+        request.model_dump(mode="json"),
+        _to_json_safe(result.model_dump(mode="python")),
+        record_id=run_id,
+        created_at=created_at,
+    )
     return result
 
 
